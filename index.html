@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0E0F11">
+  <meta name="color-scheme" content="dark light">
+  <title>Главная — Вадим</title>
+  <script>
+    (() => {
+      try {
+        const saved = localStorage.getItem("vadim-theme");
+        if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+      } catch (error) {}
+    })();
+  </script>
+  <style>:root{--font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--page-max:1080px;--sidebar-w:260px;--radius:18px;--radius-sm:12px;--ease:cubic-bezier(.22,1,.36,1);}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0E0F11;--surface:#17181B;--surface-2:#202226;--surface-3:#292B30;--border:rgba(255,255,255,.08);--border-strong:rgba(255,255,255,.16);--text:#F4F4F5;--muted:#A9AAB2;--muted-2:#909199;--accent:#FF6B00;--accent-text:#FF944D;--accent-soft:rgba(255,107,0,.14);--accent-line:rgba(255,107,0,.38);--on-accent:#1B1006;--protein:#FF7A1A;--carbs:#FFB84D;--fats:#7C8CA3;--track:rgba(255,255,255,.09);--shadow:none;--card-grad:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,0) 60%);--topbar-bg:rgba(14,15,17,.8);--nav-bg:rgba(16,17,20,.88);--tooltip-bg:#24262B;--focus:#FFB27A;--wash-a:rgba(255,107,0,.055);--wash-b:rgba(124,140,163,.05);--sheen:rgba(255,255,255,.03);--sheen-soft:rgba(255,255,255,.025);--accent-hover:#FF7A1A;--float-shadow:0 14px 38px rgba(0,0,0,.26);--toast-shadow:0 14px 34px rgba(0,0,0,.24);--avatar-bg:#32251B;--avatar-text:#FFD6B5;--rest-tint:rgba(124,140,163,.08);}
+:root[data-theme="light"]{color-scheme:light;--bg:#F6F5F3;--surface:#FFFFFF;--surface-2:#F0EEEA;--surface-3:#E7E4DE;--border:rgba(22,21,18,.09);--border-strong:rgba(22,21,18,.17);--text:#17181B;--muted:#5F6168;--muted-2:#686A71;--accent:#FF6B00;--accent-text:#B24000;--accent-soft:rgba(255,107,0,.10);--accent-line:rgba(201,74,0,.30);--on-accent:#1B1006;--protein:#E75D00;--carbs:#D88A12;--fats:#6F8097;--track:rgba(22,21,18,.09);--shadow:0 1px 2px rgba(25,22,18,.04),0 10px 28px rgba(25,22,18,.045);--card-grad:linear-gradient(180deg,#FFFFFF,#FFFFFF);--topbar-bg:rgba(246,245,243,.84);--nav-bg:rgba(246,245,243,.92);--tooltip-bg:#FFFFFF;--focus:#A33A00;--wash-a:rgba(255,107,0,.06);--wash-b:rgba(124,140,163,.12);--sheen:rgba(255,255,255,.03);--sheen-soft:rgba(255,255,255,.025);--accent-hover:#FF7A1A;--float-shadow:0 14px 38px rgba(22,21,18,.16);--toast-shadow:0 14px 34px rgba(22,21,18,.14);--avatar-bg:#F4E4D7;--avatar-text:#963500;--rest-tint:rgba(124,140,163,.13);}
+*,*::before,*::after{box-sizing:border-box;transition:background-color .2s ease-out,border-color .2s ease-out,color .2s ease-out,fill .2s ease-out,stroke .2s ease-out,box-shadow .2s ease-out;}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+body{min-width:320px;margin:0;overflow-x:hidden;color:var(--text);background-color:var(--bg);background-image:radial-gradient(70rem 46rem at 92% -18%,var(--wash-a),transparent 56%),radial-gradient(46rem 32rem at -12% 88%,var(--wash-b),transparent 58%);background-attachment:fixed;font-family:var(--font);font-size:15.5px;line-height:1.5;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;}
+h1,h2,h3,h4,p,ul,ol,figure{margin:0;} ul,ol{padding:0;list-style:none;} button,input,select,textarea{font:inherit;} button{padding:0;color:inherit;background:none;border:0;cursor:pointer;} a{color:inherit;text-decoration:none;}
+svg{display:block;} img{max-width:100%;} strong,b{font-weight:700;} ::selection{color:var(--text);background:var(--accent-soft);} :where(button,a,[tabindex]):focus-visible{outline:2px solid var(--focus);outline-offset:3px;}
+button:disabled{cursor:default;} .icon{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;} .icon-sprite{position:absolute;width:0;height:0;overflow:hidden;}
+.sr-only{position:absolute !important;width:1px !important;height:1px !important;padding:0 !important;margin:-1px !important;overflow:hidden !important;clip:rect(0,0,0,0) !important;white-space:nowrap !important;border:0 !important;}
+.skip-link{position:fixed;top:-80px;left:16px;z-index:100;display:inline-flex;min-height:44px;padding:10px 14px;align-items:center;color:var(--on-accent);background:var(--accent);border-radius:var(--radius-sm);font-weight:700;}
+.skip-link:focus{top:12px;} .card{background-color:var(--surface);background-image:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;border:1px solid transparent;border-radius:var(--radius-sm);font-size:14.5px;font-weight:700;line-height:1.2;text-align:center;transition:background-color .2s ease-out,border-color .2s ease-out,color .2s ease-out,transform .16s ease-out,box-shadow .2s ease-out;}
+.btn .icon{width:18px;height:18px;} .btn:active{transform:translateY(1px);} .btn--primary{color:var(--on-accent);background:var(--accent);border-color:var(--accent);}
+.icon-button{display:inline-grid;place-items:center;width:44px;height:44px;border:1px solid var(--border);border-radius:50%;color:var(--muted);background:var(--surface-2);transition:color .2s ease-out,background-color .2s ease-out,border-color .2s ease-out,transform .16s ease-out;}
+.icon-button:active{transform:scale(.96);}
+.chip{display:inline-flex;align-items:center;gap:5px;min-height:26px;padding:3px 9px;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:999px;font-size:11.5px;font-weight:600;line-height:1.25;white-space:nowrap;}
+.badge{display:inline-flex;align-items:center;gap:6px;min-height:27px;padding:4px 10px;border-radius:999px;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);font-size:11.5px;font-weight:650;white-space:nowrap;}
+.badge--done{color:var(--accent-text);background:var(--accent-soft);border-color:var(--accent-line);}
+.eyebrow{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;font-weight:650;line-height:1.4;letter-spacing:.015em;} .eyebrow .icon{width:15px;height:15px;}
+.eyebrow-dot{width:5px;height:5px;flex:none;border-radius:50%;background:var(--accent);} .card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.card-title{color:var(--text);font-size:15.5px;font-weight:700;letter-spacing:-.012em;} .card-hint{color:var(--muted);font-size:11.5px;line-height:1.4;text-align:right;} [hidden]{display:none !important;} .shell,.main{min-height:100vh;}
+.main{min-height:100dvh;} .page{width:100%;max-width:var(--page-max);margin:0 auto;padding:18px 16px calc(100px + env(safe-area-inset-bottom));} .screen[hidden]{display:none;} .screen{animation:screen-in .23s ease-out both;}
+.topbar{position:sticky;top:0;z-index:40;background:var(--topbar-bg);border-bottom:1px solid var(--border);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);}
+.topbar-inner{display:flex;align-items:center;justify-content:space-between;width:100%;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;}
+.brand{display:inline-flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:44px;gap:4px;border-radius:8px;transition:opacity .16s ease-out;} .brand:active{opacity:.8;}
+.brand-name{color:var(--text);font-size:23px;font-weight:800;line-height:.88;letter-spacing:-.02em;} .brand-sub{color:var(--accent-text);font-size:11px;font-weight:650;line-height:1;letter-spacing:.18em;white-space:nowrap;}
+.brand--side .brand-name{font-size:31px;} .brand--side .brand-sub{font-size:11.5px;} .theme-icon{width:20px;height:20px;} .theme-icon-sun{display:block;} .theme-icon-moon{display:none;} [data-theme="light"] .theme-icon-sun{display:none;}
+[data-theme="light"] .theme-icon-moon{display:block;}
+.sidebar{position:fixed;inset:0 auto 0 0;z-index:35;display:none;width:var(--sidebar-w);padding:28px 20px 22px;flex-direction:column;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);}
+.side-nav{display:flex;flex-direction:column;gap:6px;margin-top:38px;}
+.nav-link{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 12px;border:1px solid transparent;border-radius:var(--radius-sm);color:var(--muted);font-size:14px;font-weight:600;transition:color .2s ease-out,background-color .2s ease-out,border-color .2s ease-out;}
+.nav-link .icon{width:20px;height:20px;} .nav-link[aria-current="page"]{color:var(--accent-text);background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 18%,transparent);}
+.sidebar-bottom{display:flex;flex-direction:column;gap:12px;margin-top:auto;padding-top:24px;}
+.side-theme{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:48px;padding:0 12px;color:var(--muted);background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:600;}
+.side-theme:hover{background:var(--surface-2);} .side-theme:active{opacity:.8;} .side-theme-label{display:inline-flex;align-items:center;gap:9px;} .side-theme-label .icon{width:17px;height:17px;}
+.theme-switch{position:relative;display:inline-block;width:32px;height:18px;flex:none;background:var(--surface-3);border:1px solid var(--border);border-radius:999px;}
+.theme-switch-knob{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--muted);transition:left .2s var(--ease),background-color .2s ease-out;}
+[data-theme="dark"] .theme-switch-knob{left:16px;background:var(--accent);} [data-theme="light"] .theme-switch-knob{left:2px;background:var(--accent-text);}
+.client-card{display:flex;align-items:center;gap:10px;padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);}
+.avatar{display:inline-grid;place-items:center;width:38px;height:38px;flex:none;color:var(--avatar-text);background:var(--avatar-bg);border-radius:50%;font-size:14px;font-weight:800;letter-spacing:-.02em;}
+.avatar--sm{width:28px;height:28px;font-size:11px;} .avatar--coach{color:var(--accent-text);background:var(--accent-soft);border:1px solid var(--accent-line);} .client-copy{display:flex;min-width:0;flex-direction:column;gap:1px;}
+.client-copy strong{color:var(--text);font-size:13.5px;font-weight:700;line-height:1.25;} .client-copy > span{color:var(--muted);font-size:11px;line-height:1.35;}
+.client-copy .client-goal{margin-top:3px;color:var(--accent-text);font-weight:650;}
+.bottom-nav{position:fixed;right:0;bottom:0;left:0;z-index:50;padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:var(--nav-bg);border-top:1px solid var(--border);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);}
+.bottom-inner{display:grid;grid-template-columns:repeat(4,1fr);max-width:560px;margin:0 auto;}
+.tab{display:flex;min-height:52px;padding:5px 2px 3px;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted);border-radius:10px;font-size:10.5px;font-weight:600;line-height:1.2;letter-spacing:.01em;transition:color .2s ease-out,background-color .2s ease-out;}
+.tab .icon{width:22px;height:22px;} .tab[aria-current="page"]{color:var(--accent-text);} .tab[aria-current="page"] .icon{transform:translateY(-1px);} .tab:active,.nav-link:active{opacity:.8;} .tab:hover{color:var(--text);}
+.tab:focus-visible{outline-offset:-2px;} .tab[aria-current="page"]:hover{color:var(--accent-text);} .app-footer{padding:26px 4px 8px;color:var(--muted);font-size:11.5px;line-height:1.5;text-align:center;}
+.screen-head{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:14px;} .screen-head h1{max-width:100%;color:var(--text);font-size:clamp(29px,7.4vw,38px);font-weight:800;line-height:1.04;letter-spacing:-.04em;}
+.home-title{color:var(--muted);font-weight:600;} .home-title .home-name{color:var(--text);font-weight:800;} .screen-sub{max-width:62ch;color:var(--muted);font-size:13.5px;line-height:1.5;}
+.dash-grid{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;gap:12px;} .today-card{position:relative;isolation:isolate;overflow:hidden;padding:18px;border-radius:var(--radius);}
+.today-card::before{position:absolute;inset:0;z-index:-1;background:radial-gradient(32rem 22rem at 94% 7%,var(--accent-soft),transparent 58%),linear-gradient(128deg,var(--sheen),transparent 42%);content:"";pointer-events:none;}
+.today-card--rest::before{background:radial-gradient(30rem 20rem at 96% 12%,var(--rest-tint),transparent 62%),linear-gradient(128deg,var(--sheen-soft),transparent 48%);}
+.today-card--done::before{background:radial-gradient(32rem 22rem at 94% 7%,var(--rest-tint),transparent 58%),linear-gradient(128deg,var(--sheen),transparent 42%);}
+.hero-art{position:absolute;top:-44px;right:-54px;z-index:-1;width:198px;height:198px;border:1px solid var(--border);border-radius:50%;opacity:.9;pointer-events:none;}
+.hero-art::before{position:absolute;top:34px;right:34px;width:128px;height:128px;border:1px solid var(--border);border-radius:50%;content:"";}
+.hero-art::after{position:absolute;right:61px;bottom:33px;width:7px;height:7px;background:var(--accent);border-radius:50%;box-shadow:0 0 0 5px var(--accent-soft);content:"";}
+.hero-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-start;gap:12px;} .hero-top{display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px;}
+.hero-tag{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;font-weight:650;} .hero-tag strong{color:var(--text);font-weight:650;}
+.hero-status{color:var(--accent-text);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:999px;padding:4px 9px;font-size:10.5px;font-weight:650;line-height:1.2;white-space:nowrap;}
+.today-title{color:var(--text);font-size:clamp(24px,6.2vw,31px);font-weight:800;line-height:1.08;letter-spacing:-.04em;} .today-copy{max-width:48ch;color:var(--muted);font-size:13.5px;line-height:1.5;}
+.hero-meta{display:flex;align-items:center;flex-wrap:wrap;gap:7px 14px;color:var(--muted);font-size:12.5px;font-weight:500;} .hero-meta span{display:inline-flex;align-items:center;gap:6px;}
+.hero-meta .icon{width:15px;height:15px;color:var(--muted-2);} .hero-chips{display:flex;flex-wrap:wrap;gap:6px;} .hero-action{width:100%;margin-top:1px;}
+.hero-next{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);text-align:left;transition:background-color .2s ease-out,border-color .2s ease-out,transform .16s ease-out;}
+.hero-next:active{transform:scale(.995);}
+@media (hover:hover){
+  button.hero-next:hover{border-color:var(--border-strong);background:var(--surface-3);}
+}
+.hero-next-copy{display:flex;min-width:0;flex-direction:column;gap:2px;} .hero-next-copy span{color:var(--muted);font-size:10.5px;font-weight:650;} .hero-next-copy strong{color:var(--text);font-size:13px;font-weight:700;line-height:1.3;}
+.hero-next-copy small{color:var(--muted);font-size:11px;} .hero-next-icon{display:grid;width:37px;height:37px;flex:none;place-items:center;color:var(--accent-text);background:var(--accent-soft);border-radius:50%;}
+.hero-next-icon .icon{width:17px;height:17px;} .rest-badge{display:grid;width:46px;height:46px;place-items:center;color:var(--accent-text);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:50%;}
+.rest-badge .icon{width:21px;height:21px;} .stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;} .stat-card{position:relative;overflow:hidden;min-width:0;}
+.stat-link{display:flex;min-height:108px;padding:12px;flex-direction:column;justify-content:space-between;gap:12px;border-radius:inherit;} .stat-link:focus-visible{outline-offset:-4px;} .stat-link:active{opacity:.86;}
+.stat-top{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:11.5px;font-weight:650;line-height:1.2;} .stat-top .icon{width:16px;height:16px;color:var(--muted-2);}
+.stat-chevron{width:14px !important;height:14px !important;margin-left:auto;color:var(--muted-2);} .stat-main{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;min-width:0;}
+.stat-value{display:block;color:var(--text);font-size:25px;font-weight:800;line-height:1;letter-spacing:-.04em;white-space:nowrap;} .stat-value .stat-divider{color:var(--muted-2);font-weight:500;}
+.stat-meta{display:block;margin-top:4px;color:var(--muted);font-size:10.5px;line-height:1.35;white-space:normal;} .stat-extra{display:block;color:var(--muted-2);font-size:9.5px;}
+.stat-viz{display:flex;min-width:32px;align-items:flex-end;justify-content:flex-end;padding-bottom:1px;} .stat-mini-bars{display:flex;align-items:flex-end;gap:3px;height:24px;}
+.stat-mini-bars span{width:4px;border-radius:3px;background:var(--track);} .stat-mini-bars span:nth-child(1){height:10px;} .stat-mini-bars span:nth-child(2){height:14px;} .stat-mini-bars span:nth-child(3){height:18px;}
+.stat-mini-bars span:nth-child(4){height:23px;} .stat-mini-bars span.is-filled{background:var(--accent);} .stat-dots{display:flex;align-items:center;gap:4px;}
+.stat-dots i{display:block;width:6px;height:6px;border-radius:50%;background:var(--track);} .stat-dots i.is-filled{background:var(--accent);}
+.stat-quick{position:absolute;right:10px;bottom:10px;z-index:2;display:grid;width:44px;height:44px;place-items:center;color:var(--accent-text);background:var(--surface-2);border:1px solid var(--border);border-radius:50%;transition:background-color .2s ease-out,border-color .2s ease-out,transform .16s ease-out;}
+.stat-quick:active{transform:scale(.94);} .stat-quick[aria-disabled="true"]{color:var(--muted-2);background:var(--surface-2);cursor:default;} .stat-quick[aria-disabled="true"]:active{transform:none;}
+.stat-quick .icon{width:17px;height:17px;} .stat-card--water .stat-link{padding-right:56px;} .stat-card--water .stat-meta{white-space:normal;}
+.ring{--ring-size:52px;--ring-stroke:4.5px;position:relative;display:inline-grid;width:var(--ring-size);height:var(--ring-size);flex:none;place-items:center;} .ring svg{width:100%;height:100%;overflow:visible;}
+.ring-track,.ring-value{fill:none;stroke-width:var(--ring-stroke);} .ring-track{stroke:var(--track);} .ring-value{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .25s var(--ease),stroke .2s ease-out;}
+.ring-center{position:absolute;inset:0;display:grid;place-items:center;color:var(--text);font-size:calc(var(--ring-size) * .19);font-weight:750;line-height:1;letter-spacing:-.04em;} .goal-card{padding:18px;}
+.goal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;} .goal-head h2{margin-top:4px;color:var(--text);font-size:17px;font-weight:750;line-height:1.25;letter-spacing:-.02em;}
+.goal-delta{display:inline-flex;align-items:center;gap:4px;min-height:29px;padding:3px 9px;flex:none;color:var(--accent-text);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;}
+.goal-delta .icon{width:13px;height:13px;} .goal-current{display:flex;align-items:flex-end;gap:10px;margin-top:14px;} .goal-current strong{color:var(--text);font-size:38px;font-weight:800;line-height:.93;letter-spacing:-.055em;}
+.goal-current strong small{margin-left:2px;color:var(--muted);font-size:15px;font-weight:500;letter-spacing:0;} .goal-remaining{padding-bottom:3px;color:var(--muted);font-size:11.5px;line-height:1.35;}
+.goal-remaining b{color:var(--text);font-weight:700;} .goal-track-wrap{margin-top:14px;} .goal-track{position:relative;width:100%;height:9px;background:var(--track);border-radius:999px;}
+.goal-fill{position:absolute;inset:0 auto 0 0;width:var(--goal-p);background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 72%,var(--carbs)));border-radius:inherit;}
+.goal-marker{position:absolute;top:50%;left:var(--goal-p);width:17px;height:17px;background:var(--surface);border:4px solid var(--accent);border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 3px var(--surface);}
+.goal-ends{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px;color:var(--muted);font-size:10.5px;} .goal-ends b{color:var(--text);font-weight:650;} .goal-chart{margin-top:14px;padding-top:2px;}
+.goal-chart svg{width:100%;height:auto;overflow:visible;}
+.chart-line{fill:none;stroke:var(--accent);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:draw-line .25s var(--ease) forwards;}
+.chart-area{opacity:0;animation:fade-in .25s ease-out forwards;} .chart-grid{stroke:var(--border);stroke-width:1;stroke-dasharray:3 6;} .chart-dot{fill:var(--surface);stroke:var(--accent);stroke-width:1.6;}
+.chart-dot--last{fill:var(--accent);stroke:var(--surface);stroke-width:2.4;} .chart-caption{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;color:var(--muted);font-size:10.5px;line-height:1.4;}
+.chart-caption b{color:var(--text);font-weight:650;} .macro-card{padding:18px;} .macro-list{display:flex;flex-direction:column;gap:13px;margin-top:15px;} .macro-row{display:flex;flex-direction:column;gap:6px;}
+.macro-label{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;line-height:1.3;} .macro-label > span:first-child{display:inline-flex;align-items:center;gap:7px;}
+.macro-dot{width:7px;height:7px;border-radius:2px;background:var(--protein);} .macro-letter{color:var(--text);font-size:10px;font-weight:750;} .macro-row--fat .macro-dot{background:var(--fats);}
+.macro-row--carb .macro-dot{background:var(--carbs);} .macro-label b{color:var(--text);font-weight:700;} .macro-label .macro-target{color:var(--muted);font-weight:500;}
+.bar-track{width:100%;height:8px;overflow:hidden;background:var(--track);border-radius:999px;}
+.bar-fill{display:block;width:var(--bar-w);height:100%;border-radius:inherit;transform-origin:left center;animation:bar-in .24s var(--ease) both;} .bar-fill--protein{background:var(--protein);} .bar-fill--fat{background:var(--fats);}
+.bar-fill--carb{background:var(--carbs);} .week-card{padding:12px;} .week-card .card-head{padding:2px 3px 10px;} .week-strip{display:grid;grid-template-columns:repeat(7,minmax(44px,1fr));gap:4px;}
+.day-button{position:relative;display:flex;min-width:0;min-height:65px;padding:7px 2px 5px;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--text);background:transparent;border:1px solid transparent;border-radius:var(--radius-sm);transition:background-color .2s ease-out,border-color .2s ease-out,color .2s ease-out,transform .16s ease-out;}
+.day-button:active{transform:scale(.97);} .day-name{color:var(--muted);font-size:10px;font-weight:650;line-height:1.2;letter-spacing:.02em;}
+.day-date{color:var(--text);font-size:15px;font-weight:700;line-height:1.2;letter-spacing:-.02em;} .day-state{display:flex;height:12px;align-items:center;justify-content:center;color:var(--muted-2);line-height:1;}
+.day-state .icon{width:11px;height:11px;} .day-state .day-dot{display:block;width:4px;height:4px;border-radius:50%;background:var(--muted-2);}
+.day-state .day-dot--hollow{width:5px;height:5px;background:transparent;border:1px solid var(--muted-2);} .day-button.is-done .day-state{color:var(--accent-text);} .day-button.is-done .day-date{color:var(--text);}
+.day-button.is-today{background:var(--accent-soft);border-color:var(--accent-line);} .day-button.is-today .day-name,.day-button.is-today .day-date{color:var(--accent-text);} .day-button.is-today .day-state{color:var(--accent-text);}
+.day-button.is-today .day-state .day-dot{background:var(--accent);} .day-button.is-selected{background:var(--surface-2);border-color:var(--border-strong);}
+.day-button.is-selected.is-today{background:var(--accent-soft);border-color:var(--accent-line);} .day-button.is-rest:not(.is-today) .day-name{color:var(--muted-2);} .message-card{padding:18px;}
+.message-head{display:flex;align-items:center;gap:10px;} .message-ident{display:flex;flex-direction:column;gap:1px;} .message-ident strong{color:var(--text);font-size:13.5px;font-weight:700;line-height:1.25;}
+.message-ident span{color:var(--muted);font-size:10.5px;line-height:1.35;} .message-mark{display:grid;width:32px;height:32px;margin-left:auto;place-items:center;color:var(--accent-text);background:var(--accent-soft);border-radius:10px;}
+.message-mark .icon{width:16px;height:16px;} .message-text{margin-top:15px;color:var(--text);font-size:14px;line-height:1.6;}
+.next-meal-card{display:flex;align-items:center;gap:13px;padding:16px;transition:border-color .2s ease-out,background-color .2s ease-out,transform .16s ease-out;} .next-meal-card:active{transform:scale(.995);}
+.next-meal-time{display:flex;width:60px;min-height:60px;flex:none;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--accent-text);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:var(--radius-sm);}
+.next-meal-time strong{font-size:16px;font-weight:800;line-height:1.1;letter-spacing:-.03em;} .next-meal-time span{color:var(--accent-text);font-size:9px;font-weight:650;line-height:1.2;}
+.next-meal-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:3px;} .next-meal-copy .eyebrow{font-size:10px;} .next-meal-copy strong{color:var(--text);font-size:14px;font-weight:700;line-height:1.3;}
+.next-meal-copy small{color:var(--muted);font-size:11.5px;line-height:1.35;} .next-meal-arrow{display:grid;width:32px;height:32px;flex:none;place-items:center;color:var(--muted);background:var(--surface-2);border-radius:50%;}
+.next-meal-arrow .icon{width:15px;height:15px;} .home-side{display:grid;min-width:0;align-items:start;gap:12px;} .home-side > *{width:100%;min-width:0;} .week-panel{padding:12px;} .week-panel .card-head{padding:1px 2px 10px;}
+.session-card{position:relative;overflow:hidden;padding:20px;margin-top:12px;}
+.session-card::after{position:absolute;top:-64px;right:-64px;width:184px;height:184px;border:1px solid var(--border);border-radius:50%;content:"";pointer-events:none;}
+.session-topline{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.session-title{position:relative;z-index:1;margin-top:8px;color:var(--text);font-size:clamp(24px,6vw,30px);font-weight:800;line-height:1.08;letter-spacing:-.04em;} .session-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px;}
+.session-meta .chip{min-height:28px;background:var(--surface-2);} .session-progress{margin-top:18px;}
+.progress-label{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:11.5px;line-height:1.3;} .progress-label b{color:var(--text);font-weight:700;}
+.progress-track{width:100%;height:7px;margin-top:7px;overflow:hidden;background:var(--track);border-radius:999px;}
+.progress-fill{width:var(--progress);height:100%;background:var(--accent);border-radius:inherit;transform-origin:left center;animation:bar-in .24s var(--ease) both;} .workout-grid{display:grid;gap:16px;margin-top:20px;}
+.workout-main{min-width:0;} .section-line{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:11px;}
+.section-line h2{color:var(--text);font-size:18px;font-weight:750;line-height:1.3;letter-spacing:-.025em;} .section-line span{color:var(--muted);font-size:11.5px;} .exercise-list{display:grid;gap:9px;} .exercise-card{overflow:visible;}
+.exercise-row{display:flex;align-items:flex-start;}
+.exercise-main{display:flex;min-width:0;min-height:74px;flex:1;align-items:flex-start;gap:10px;padding:14px;color:var(--text);text-align:left;border-radius:var(--radius) 0 0 var(--radius);}
+.exercise-index{width:21px;flex:none;padding-top:2px;color:var(--muted-2);font-size:10.5px;font-weight:700;line-height:1.4;letter-spacing:.02em;} .exercise-info{display:flex;min-width:0;flex:1;flex-direction:column;gap:5px;}
+.exercise-name{color:var(--text);font-size:14.5px;font-weight:700;line-height:1.3;letter-spacing:-.012em;} .exercise-meta{display:flex;flex-wrap:wrap;align-items:center;gap:5px 7px;color:var(--muted);font-size:11px;line-height:1.35;}
+.exercise-meta .chip{min-height:21px;padding:1px 7px;font-size:10px;} .exercise-summary{color:var(--muted);}
+.exercise-caret{width:16px;height:16px;margin:2px 0 0 4px;flex:none;color:var(--muted-2);transition:transform .2s var(--ease),color .2s ease-out;}
+.exercise-main[aria-expanded="true"] .exercise-caret{color:var(--accent-text);transform:rotate(180deg);} .exercise-main:active{background:var(--surface-2);}
+.exercise-check{display:grid;width:44px;height:44px;margin:11px 11px 0 0;flex:none;place-items:center;color:var(--muted-2);background:transparent;border:1.5px solid var(--border-strong);border-radius:50%;transition:color .2s ease-out,background-color .2s ease-out,border-color .2s ease-out,transform .16s ease-out;}
+.exercise-check:active{transform:scale(.94);} .exercise-check .icon{width:18px;height:18px;} .exercise-check[aria-pressed="true"]{color:var(--on-accent);background:var(--accent);border-color:var(--accent);}
+.exercise-card.is-done{border-color:var(--accent-line);} .exercise-card.is-open{border-color:var(--border-strong);} .exercise-detail{padding:0 14px 15px 45px;} .exercise-detail-inner{padding-top:0;}
+.set-table-wrap{overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-sm);} .set-table{width:100%;border-collapse:collapse;color:var(--text);font-size:12.5px;}
+.set-table th{padding:7px 10px;color:var(--muted);background:var(--surface-2);font-size:10px;font-weight:650;letter-spacing:.025em;text-align:left;} .set-table th:first-child,.set-table td:first-child{width:27%;}
+.set-table th:last-child,.set-table td:last-child{text-align:right;} .set-table td{padding:7px 10px;border-top:1px solid var(--border);font-weight:600;} .set-table td:first-child{color:var(--muted);font-weight:500;}
+.exercise-tip{display:flex;gap:8px;margin-top:10px;padding:10px 11px;color:var(--muted);background:var(--surface-2);border-radius:var(--radius-sm);font-size:11.5px;line-height:1.55;}
+.exercise-tip .icon{width:14px;height:14px;margin-top:1px;flex:none;color:var(--accent-text);} .exercise-tip strong{color:var(--text);font-weight:650;} .workout-side{display:grid;gap:12px;align-content:start;} .note-card{padding:18px;}
+.note-head{display:flex;align-items:center;gap:9px;} .note-ident{display:flex;flex-direction:column;gap:1px;} .note-ident strong{color:var(--text);font-size:12.5px;font-weight:700;} .note-ident span{color:var(--muted);font-size:10.5px;}
+.note-text{margin-top:12px;color:var(--text);font-size:12.5px;line-height:1.6;} .note-sign{margin-top:10px;color:var(--muted);font-size:10.5px;} .rest-card{position:relative;overflow:hidden;padding:22px;margin-top:12px;}
+.rest-card::before{position:absolute;top:-92px;right:-88px;width:250px;height:250px;background:var(--rest-tint);border-radius:50%;content:"";pointer-events:none;} .rest-head{position:relative;display:flex;align-items:flex-start;gap:14px;}
+.rest-copy{display:flex;min-width:0;flex-direction:column;gap:7px;} .rest-copy h2{color:var(--text);font-size:clamp(24px,6vw,30px);font-weight:800;line-height:1.08;letter-spacing:-.04em;}
+.rest-copy p{max-width:54ch;color:var(--muted);font-size:13.5px;line-height:1.55;} .rest-ideas{display:flex;flex-wrap:wrap;gap:7px;margin-top:17px;}
+.rest-ideas span{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:4px 10px;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:999px;font-size:11px;}
+.rest-ideas .icon{width:14px;height:14px;}
+.rest-next{display:flex;width:100%;align-items:center;justify-content:space-between;gap:14px;margin-top:18px;padding:14px;color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);text-align:left;transition:background-color .2s ease-out,border-color .2s ease-out,transform .16s ease-out;}
+.rest-next:active{transform:scale(.995);} .rest-next-copy{display:flex;min-width:0;flex-direction:column;gap:2px;} .rest-next-copy span{color:var(--muted);font-size:10.5px;}
+.rest-next-copy strong{color:var(--text);font-size:13.5px;font-weight:700;line-height:1.3;} .rest-next-copy small{color:var(--muted);font-size:11px;}
+.rest-next-arrow{display:grid;width:37px;height:37px;flex:none;place-items:center;color:var(--accent-text);background:var(--accent-soft);border-radius:50%;} .rest-next-arrow .icon{width:17px;height:17px;}
+.rest-quote{display:flex;align-items:flex-start;gap:8px;margin-top:16px;padding-top:14px;color:var(--muted);border-top:1px solid var(--border);font-size:11.5px;line-height:1.55;}
+.rest-quote .icon{width:15px;height:15px;flex:none;color:var(--accent-text);}
+.finish-dock{position:fixed;bottom:calc(80px + env(safe-area-inset-bottom));left:50%;z-index:46;width:min(520px,calc(100% - 32px));padding:8px;background:var(--surface);border:1px solid var(--border-strong);border-radius:16px;box-shadow:var(--float-shadow);transform:translateX(-50%);}
+.finish-dock .btn{width:100%;min-height:48px;} .dock-spacer{height:84px;} body.has-dock .page{padding-bottom:calc(170px + env(safe-area-inset-bottom));} .day-picker{padding:8px;margin-bottom:12px;}
+.food-days{display:grid;grid-template-columns:repeat(7,minmax(44px,1fr));gap:3px;}
+.food-day{position:relative;display:flex;min-width:0;min-height:58px;padding:7px 2px 6px;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--text);border:1px solid transparent;border-radius:var(--radius-sm);transition:color .2s ease-out,background-color .2s ease-out,border-color .2s ease-out;}
+.food-day .food-day-name{color:var(--muted);font-size:10px;font-weight:650;line-height:1.2;} .food-day .food-day-date{color:var(--text);font-size:15px;font-weight:750;line-height:1.2;letter-spacing:-.02em;}
+.food-day.is-today .food-day-name{color:var(--accent-text);} .food-day[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-line);}
+.food-day[aria-pressed="true"] .food-day-name,.food-day[aria-pressed="true"] .food-day-date{color:var(--accent-text);} .food-day:hover{background:var(--surface-2);} .food-day:active{transform:scale(.97);}
+.food-day[aria-pressed="true"]:hover{background:var(--accent-soft);} .nutrition-layout{display:grid;gap:14px;} .nutrition-main,.nutrition-side{display:flex;min-width:0;flex-direction:column;gap:12px;} .target-card{padding:18px;}
+.target-top{display:flex;align-items:center;justify-content:space-between;gap:14px;} .target-copy{display:flex;min-width:0;flex-direction:column;gap:4px;} .target-copy .eyebrow{font-size:11px;}
+.target-value{color:var(--text);font-size:clamp(30px,7vw,38px);font-weight:800;line-height:1;letter-spacing:-.055em;white-space:nowrap;}
+.target-value small{margin-left:3px;color:var(--muted);font-size:14px;font-weight:500;letter-spacing:0;} .target-left{color:var(--muted);font-size:11.5px;line-height:1.35;} .target-left b{color:var(--text);font-weight:650;}
+.target-ring{flex:none;} .target-card .macro-list{margin-top:16px;gap:11px;}
+.advice-line{display:flex;align-items:flex-start;gap:7px;margin-top:15px;padding-top:13px;color:var(--muted);border-top:1px solid var(--border);font-size:11.5px;line-height:1.5;}
+.advice-line .icon{width:14px;height:14px;margin-top:1px;flex:none;color:var(--accent-text);} .meal-section{display:flex;flex-direction:column;gap:10px;}
+.meal-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:2px 2px 1px;} .meal-section-head h2{color:var(--text);font-size:18px;font-weight:750;letter-spacing:-.025em;}
+.meal-section-head span{color:var(--muted);font-size:11.5px;} .meal-list{display:grid;gap:10px;} .meal-card{padding:16px;} .meal-card.is-eaten{border-color:color-mix(in srgb,var(--accent) 26%,var(--border));}
+.meal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;} .meal-name-row{display:flex;align-items:center;gap:8px;}
+.meal-name-row h3{color:var(--text);font-size:16px;font-weight:750;line-height:1.2;letter-spacing:-.02em;} .meal-time{color:var(--muted);font-size:11px;font-weight:500;line-height:1.2;}
+.meal-kcal{flex:none;color:var(--text);font-size:13px;font-weight:750;line-height:1.3;white-space:nowrap;} .meal-kcal small,.meal-kcal > span:last-child{color:var(--muted);font-size:10px;font-weight:500;}
+.meal-kcal-label{display:block;margin-bottom:1px;color:var(--muted);font-size:9.5px;font-weight:500;text-align:right;} .dishes{margin-top:10px;border-top:1px solid var(--border);}
+.dish{padding:9px 0;border-bottom:1px solid var(--border);} .dish:last-child{border-bottom:0;padding-bottom:1px;} .dish-main{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+.dish-name{color:var(--text);font-size:13px;font-weight:600;line-height:1.4;} .dish-kcal{flex:none;color:var(--muted);font-size:10.5px;line-height:1.4;white-space:nowrap;}
+.dish-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 7px;margin-top:2px;color:var(--muted);font-size:10px;line-height:1.35;} .dish-grams{color:var(--muted-2);}
+.dish-sep{width:2px;height:2px;border-radius:50%;background:var(--muted-2);} .meal-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;}
+.meal-total{display:flex;min-width:0;flex-direction:column;gap:1px;color:var(--muted);font-size:10px;line-height:1.35;} .meal-total span{color:var(--muted-2);font-size:9.5px;}
+.meal-total strong{color:var(--muted);font-size:10.5px;font-weight:550;}
+.meal-toggle,.supp-toggle{display:inline-flex;min-width:108px;min-height:44px;padding:0 13px;flex:none;align-items:center;justify-content:center;gap:6px;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:999px;font-size:12px;font-weight:650;line-height:1;white-space:nowrap;transition:color .2s ease-out,background-color .2s ease-out,border-color .2s ease-out,transform .16s ease-out;}
+.meal-toggle:active,.supp-toggle:active{transform:scale(.97);} .meal-toggle .icon,.supp-toggle .icon{width:15px;height:15px;}
+.meal-toggle[aria-pressed="true"],.supp-toggle[aria-pressed="true"]{color:var(--accent-text);background:var(--accent-soft);border-color:var(--accent-line);} .water-card{padding:18px;}
+.water-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;} .water-count{color:var(--text);font-size:26px;font-weight:800;line-height:1;letter-spacing:-.045em;}
+.water-count small{color:var(--muted);font-size:12px;font-weight:500;letter-spacing:0;} .water-copy{margin-top:4px;color:var(--muted);font-size:10.5px;line-height:1.4;}
+.water-glasses{display:grid;grid-template-columns:repeat(4,minmax(44px,1fr));gap:7px;margin-top:14px;}
+.glass-button{display:flex;min-height:52px;align-items:center;justify-content:center;color:var(--muted-2);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);transition:color .2s ease-out,background-color .2s ease-out,border-color .2s ease-out,transform .16s ease-out;}
+.glass-button:active{transform:scale(.95);} .glass-button .icon{width:21px;height:21px;} .glass-button[aria-pressed="true"]{color:var(--accent-text);background:var(--accent-soft);border-color:var(--accent-line);}
+.week-chart-card{padding:18px;} .week-chart{position:relative;height:104px;margin:15px 0 0;}
+.chart-target-line{position:absolute;right:0;bottom:var(--target-line);left:0;z-index:1;border-top:1px dashed var(--border-strong);pointer-events:none;}
+.chart-target-line span{position:absolute;top:-8px;right:0;padding-left:5px;color:var(--muted-2);background:var(--surface);font-size:9px;line-height:1;} .week-bars{display:flex;height:100%;align-items:flex-end;gap:7px;}
+.week-col{position:relative;display:flex;height:100%;flex:1;align-items:flex-end;justify-content:center;}
+.week-col .plan-tick{position:absolute;right:17%;bottom:var(--plan-line);left:17%;z-index:2;height:1px;background:var(--border-strong);}
+.week-bar-fill{display:block;width:min(16px,74%);height:var(--bar-h);min-height:2px;background:var(--accent);border-radius:5px 5px 2px 2px;opacity:.48;transform-origin:bottom center;animation:bar-up .24s var(--ease) both;}
+.week-col.is-selected .week-bar-fill,.week-col.is-today .week-bar-fill{opacity:1;} .week-axis{display:flex;gap:7px;margin-top:6px;} .week-axis span{flex:1;color:var(--muted-2);font-size:9.5px;line-height:1.2;text-align:center;}
+.week-axis span.is-accent{color:var(--accent-text);font-weight:650;} .chart-legend{display:flex;align-items:center;gap:12px;margin-top:12px;color:var(--muted);font-size:9.5px;}
+.chart-legend span{display:inline-flex;align-items:center;gap:4px;} .legend-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);} .legend-dot--plan{width:7px;height:1px;border-radius:0;background:var(--border-strong);}
+.tips-card{padding:18px;} .tips-list{margin-top:11px;} .tip{display:flex;gap:9px;padding:10px 0;border-top:1px solid var(--border);} .tip:first-child{border-top:0;padding-top:0;} .tip:last-child{padding-bottom:0;}
+.tip-num{padding-top:2px;flex:none;color:var(--accent-text);font-size:9px;font-weight:750;letter-spacing:.04em;} .tip p{color:var(--muted);font-size:11.5px;line-height:1.55;} .course-card{position:relative;overflow:hidden;padding:20px;}
+.course-card::before{position:absolute;top:-76px;right:-64px;width:200px;height:200px;background:var(--accent-soft);border-radius:50%;content:"";pointer-events:none;}
+.course-top{position:relative;display:flex;align-items:flex-start;gap:12px;}
+.course-icon{display:grid;width:42px;height:42px;flex:none;place-items:center;color:var(--accent-text);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:13px;} .course-icon .icon{width:20px;height:20px;}
+.course-copy{display:flex;min-width:0;flex-direction:column;gap:4px;} .course-title{color:var(--text);font-size:clamp(19px,5vw,23px);font-weight:800;line-height:1.15;letter-spacing:-.035em;}
+.course-sub{color:var(--muted);font-size:11px;line-height:1.4;} .course-progress{position:relative;display:flex;gap:4px;margin-top:18px;} .course-progress span{height:6px;flex:1;background:var(--track);border-radius:999px;}
+.course-progress span.is-done{background:var(--accent);} .course-bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:11px;padding-top:14px;border-top:1px solid var(--border);}
+.today-supp{display:flex;flex-direction:column;gap:3px;} .today-supp .eyebrow{font-size:10px;} .today-supp strong{color:var(--text);font-size:19px;font-weight:800;line-height:1.15;letter-spacing:-.03em;}
+.today-supp strong span{color:var(--muted);font-size:11px;font-weight:500;letter-spacing:0;} .today-supp small{color:var(--muted);font-size:10.5px;} .supp-dots{display:flex;align-items:center;gap:5px;padding-bottom:4px;}
+.supp-dots i{display:block;width:7px;height:7px;border-radius:50%;background:var(--track);} .supp-dots i.is-done{background:var(--accent);}
+.info-callout{display:flex;align-items:flex-start;gap:9px;margin-top:12px;padding:13px 14px;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11.5px;line-height:1.55;}
+.info-callout .icon{width:16px;height:16px;margin-top:1px;flex:none;color:var(--muted);} .info-callout p{min-width:0;} .supp-grid{display:grid;align-items:start;gap:12px;margin-top:16px;} .supp-group{overflow:hidden;}
+.supp-group-head{display:flex;align-items:center;gap:10px;padding:15px 16px 12px;} .supp-group-icon{display:grid;width:32px;height:32px;flex:none;place-items:center;color:var(--muted);background:var(--surface-2);border-radius:10px;}
+.supp-group-icon .icon{width:17px;height:17px;} .supp-group-title{display:flex;flex-direction:column;gap:1px;} .supp-group-title h2{color:var(--text);font-size:14.5px;font-weight:750;line-height:1.2;letter-spacing:-.01em;}
+.supp-group-title span{color:var(--muted);font-size:10px;line-height:1.35;} .supp-items{border-top:1px solid var(--border);} .supp-item{padding:14px 16px 15px;border-top:1px solid var(--border);} .supp-item:first-child{border-top:0;}
+.supp-item.is-taken{background:linear-gradient(90deg,var(--accent-soft),transparent 42%);} .supp-item-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;} .supp-name{min-width:0;flex:1;}
+.supp-name h3{color:var(--text);font-size:14px;font-weight:700;line-height:1.3;letter-spacing:-.012em;} .supp-dose{margin-top:3px;color:var(--muted);font-size:10.5px;line-height:1.4;} .supp-dose b{color:var(--text);font-weight:650;}
+.supp-toggle{min-width:102px;min-height:44px;padding:0 11px;font-size:11.5px;} .supp-why{margin-top:10px;color:var(--muted);font-size:11.5px;line-height:1.55;} .supp-why span{color:var(--text);font-weight:650;}
+.supp-note{display:flex;align-items:flex-start;gap:6px;margin-top:8px;color:var(--muted-2);font-size:10.5px;line-height:1.45;} .supp-note .icon{width:13px;height:13px;margin-top:1px;flex:none;}
+.toast{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom));left:50%;z-index:80;display:flex;align-items:center;gap:9px;width:max-content;max-width:calc(100% - 32px);padding:12px 16px;color:var(--text);background:var(--tooltip-bg);border:1px solid var(--border-strong);border-radius:13px;box-shadow:var(--toast-shadow);font-size:12.5px;font-weight:600;line-height:1.35;opacity:0;pointer-events:none;transform:translate(-50%,10px);visibility:hidden;transition:opacity .2s ease-out,transform .2s var(--ease),visibility .2s ease-out,background-color .2s ease-out,border-color .2s ease-out;}
+.toast.is-visible{opacity:1;transform:translate(-50%,0);visibility:visible;} .toast .icon{width:16px;height:16px;flex:none;color:var(--accent-text);} body.has-dock .toast{bottom:calc(152px + env(safe-area-inset-bottom));}
+@media (hover:hover){
+  .btn--primary:hover{background:var(--accent-hover);border-color:var(--accent-hover);} .icon-button:hover{color:var(--text);background:var(--surface-3);border-color:var(--border-strong);}
+  .nav-link:hover{color:var(--text);background:var(--surface-2);} .day-button:hover{background:var(--surface-2);border-color:var(--border);} .day-button.is-today:hover{background:var(--accent-soft);border-color:var(--accent-line);}
+  .stat-card:hover{border-color:var(--border-strong);} .stat-card:hover .stat-chevron{color:var(--accent-text);} .stat-quick:not([aria-disabled="true"]):hover{color:var(--on-accent);background:var(--accent);border-color:var(--accent);}
+  .meal-toggle:hover,.supp-toggle:hover{color:var(--text);border-color:var(--border-strong);}
+  .meal-toggle[aria-pressed="true"]:hover,.supp-toggle[aria-pressed="true"]:hover{color:var(--accent-text);border-color:var(--accent-line);background:color-mix(in srgb,var(--accent-soft) 80%,var(--surface-2));}
+  .glass-button:hover{color:var(--text);border-color:var(--border-strong);} .glass-button[aria-pressed="true"]:hover{color:var(--accent-text);border-color:var(--accent-line);} .food-day:hover{background:var(--surface-2);}
+  .food-day[aria-pressed="true"]:hover{background:var(--accent-soft);} .next-meal-card:hover{border-color:var(--border-strong);background-color:color-mix(in srgb,var(--surface) 82%,var(--surface-2));} .brand:hover{opacity:.86;}
+  button.rest-next:hover{border-color:var(--border-strong);background:var(--surface-3);} .stat-link:hover{text-decoration:none;} .exercise-main:hover .exercise-name{color:var(--accent-text);}
+  .exercise-check:hover{border-color:var(--accent-line);color:var(--accent-text);} .exercise-check[aria-pressed="true"]:hover{background:var(--accent-hover);color:var(--on-accent);}
+}
+@media (min-width:768px){
+  .topbar-inner{max-width:900px;padding-right:24px;padding-left:24px;} .page{max-width:900px;padding:24px 24px calc(108px + env(safe-area-inset-bottom));} .screen-head{margin-bottom:20px;} .screen-head h1{font-size:40px;}
+  .dash-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;} .today-card,.stats-grid,.week-card,.home-side{grid-column:1 / -1;} .goal-card,.macro-card{min-width:0;}
+  .home-side{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;} .today-card{padding:24px;} .hero-content{max-width:650px;} .today-title{max-width:24ch;} .hero-action{width:auto;min-width:220px;} .stats-grid{gap:12px;}
+  .stat-link{min-height:124px;padding:15px;} .stat-value{font-size:28px;} .week-card{padding:16px;} .week-strip{gap:6px;} .day-button{min-height:72px;} .food-days{gap:6px;} .day-picker{padding:10px;}
+  .nutrition-layout{grid-template-columns:minmax(0,1fr) 292px;align-items:start;gap:16px;} .nutrition-main,.nutrition-side{gap:16px;} .meal-card{padding:17px;} .target-card{padding:20px;}
+  .supp-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px;} .course-card{padding:24px;} .course-bottom{align-items:center;} .toast{bottom:24px;} .course-title{font-size:23px;}
+  .session-card{margin-top:16px;padding:24px;} .workout-grid{margin-top:24px;} .week-panel{padding:16px;} .exercise-detail{padding-left:46px;} .workout-grid{grid-template-columns:minmax(0,1fr);}
+  .workout-side{grid-template-columns:minmax(0,1fr);}
+}
+@media (min-width:1024px){
+  .topbar,.bottom-nav{display:none;} .sidebar{display:flex;} .main{margin-left:var(--sidebar-w);} .page{max-width:1080px;padding:32px 32px 34px;} .app-footer{padding-top:34px;} .screen-head{margin-bottom:22px;}
+  .screen-head h1{font-size:42px;} .dash-grid{grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;} .today-card,.stats-grid{grid-column:1 / -1;} .goal-card{grid-column:span 7;} .macro-card{grid-column:span 5;}
+  .week-card{grid-column:span 7;} .home-side{display:flex;grid-column:span 5;flex-direction:column;gap:16px;} .stats-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;} .stat-link{min-height:118px;}
+  .today-card{min-height:236px;padding:26px;} .today-card .hero-content{max-width:760px;} .today-title{max-width:26ch;} .hero-art{top:-72px;right:-36px;width:264px;height:264px;}
+  .hero-art::before{top:45px;right:45px;width:172px;height:172px;} .hero-art::after{right:80px;bottom:44px;} .today-card .btn--primary{min-width:238px;} .goal-card{padding:20px;} .macro-card{padding:20px;} .week-card{padding:16px;}
+  .message-card{padding:18px;} .nutrition-layout{grid-template-columns:minmax(0,1fr) 318px;gap:16px;} .food-days{gap:6px;} .target-card{padding:20px;} .meal-card{padding:17px;} .supp-grid{margin-top:20px;}
+  .workout-grid{grid-template-columns:minmax(0,1fr) 318px;align-items:start;gap:18px;} .workout-side{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;} .session-card{margin-top:18px;}
+  .finish-dock{right:auto;bottom:22px;left:calc(var(--sidebar-w) + (100vw - var(--sidebar-w)) / 2);width:min(560px,calc(100vw - var(--sidebar-w) - 64px));transform:translateX(-50%);} .toast{bottom:24px;} body.has-dock .toast{bottom:92px;}
+  body.has-dock .app-footer{padding-bottom:16px;} .dock-spacer{height:24px;} body.has-dock .page{padding-bottom:118px;} .exercise-detail{padding-left:45px;}
+}
+@media (max-width:389px){
+  .week-strip,.food-days{grid-template-columns:repeat(4,minmax(44px,1fr));}
+}
+@media (max-width:359px){
+  .page{padding-right:12px;padding-left:12px;} .topbar-inner{padding-right:12px;padding-left:12px;} .brand-name{font-size:21px;} .today-card{padding:17px;} .today-title{font-size:24px;} .stats-grid{gap:8px;} .stat-link{padding:12px;}
+  .stat-value{font-size:22px;} .stat-top{font-size:10.5px;} .stat-meta{font-size:9.5px;} .ring{--ring-size:38px !important;} .stat-card--water .stat-link{padding-right:53px;} .stat-quick{right:8px;bottom:8px;width:44px;height:44px;}
+  .week-card{padding:10px;} .week-card .card-head{padding-left:2px;padding-right:2px;} .day-picker{padding:6px;} .meal-card{padding:14px;} .meal-foot{flex-wrap:wrap;} .meal-toggle{width:100%;min-width:0;} .target-card{padding:15px;}
+  .target-ring .ring{--ring-size:78px !important;} .target-value{font-size:27px;} .target-value small{font-size:12px;} .target-copy{gap:3px;} .meal-head{gap:8px;} .meal-kcal{font-size:12px;} .meal-name-row{gap:6px;}
+  .meal-name-row h3{font-size:15px;} .water-card,.week-chart-card,.tips-card,.course-card{padding:15px;} .supp-item-head{flex-wrap:wrap;} .supp-toggle{width:100%;min-width:0;} .rest-card,.session-card{padding:17px;}
+  .hero-next{align-items:flex-start;} .finish-dock{width:calc(100% - 24px);} .toast{max-width:calc(100% - 24px);font-size:12px;} .exercise-main{padding:13px 11px;} .exercise-check{margin-right:9px;}
+  .exercise-detail{padding-right:11px;padding-left:11px;} .exercise-name{font-size:13.5px;} .exercise-summary{display:block;} .section-line h2{font-size:17px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto !important;animation-duration:.01ms !important;animation-delay:0ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;transition-delay:0ms !important;}
+}
+@keyframes screen-in{
+  from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);}
+}
+@keyframes bar-in{
+  from{transform:scaleX(0);} to{transform:scaleX(1);}
+}
+@keyframes bar-up{
+  from{transform:scaleY(0);} to{transform:scaleY(1);}
+}
+@keyframes draw-line{
+  to{stroke-dashoffset:0;}
+}
+@keyframes fade-in{
+  to{opacity:1;}
+}
+</style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Перейти к содержимому</a>
+  <svg class="icon-sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.7 12 3l9 7.7"/><path d="M5.2 9.2V21h13.6V9.2M9.5 21v-6h5v6"/></symbol>
+    <symbol id="i-dumbbell" viewBox="0 0 24 24"><path d="M3.5 10v4M6.5 7.5v9M17.5 7.5v9M20.5 10v4M6.5 12h11"/></symbol>
+    <symbol id="i-apple" viewBox="0 0 24 24"><path d="M12 8.2c-1.5-2.1-4.6-2.7-6.4-.3C3.6 10.4 4.7 16 8.2 19c1.2 1 2.4 1.1 3.8.5 1.4.6 2.6.5 3.8-.5 3.5-3 4.6-8.6 2.6-11.1-1.8-2.4-4.9-1.8-6.4.3Z"/><path d="M12 8V5.5c0-1.4.9-2.4 2.5-2.5"/></symbol>
+    <symbol id="i-pill" viewBox="0 0 24 24"><path d="M6.1 17.9a4.1 4.1 0 0 1 0-5.8l6-6a4.1 4.1 0 1 1 5.8 5.8l-6 6a4.1 4.1 0 0 1-5.8 0Z"/><path d="m9 15 6-6"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.2 15.2A8.7 8.7 0 0 1 8.8 3.8 8.7 8.7 0 1 0 20.2 15.2Z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4L19 7"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3.2c3.1 3.5 6 6.6 6 10.1a6 6 0 0 1-12 0c0-3.5 2.9-6.6 6-10.1Z"/></symbol>
+    <symbol id="i-glass" viewBox="0 0 24 24"><path d="M6.7 3.5h10.6l-1 16.1a2 2 0 0 1-2 1.9h-4.6a2 2 0 0 1-2-1.9l-1-16.1Z"/><path d="M7.3 10h9.4"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 21c3.8 0 6.3-2.5 6.3-6 0-2.8-1.9-5.5-4.4-7.9.1 2.1-1 3.4-2.2 3.9.2-3.3-1.3-5.8-3.1-7.5.2 5-3.3 6.6-3.3 10.7C5.3 17.8 8 21 12 21Z"/><path d="M12.2 21c-1.6 0-2.8-1.1-2.8-2.7 0-1.3.9-2.4 2.1-3.4 0 1.4.7 2.1 1.3 2.5.4-1.1 1.4-1.7 2-3 .4 1.4 1 2.4 1 4 0 1.5-1.4 2.6-3.6 2.6Z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-message" viewBox="0 0 24 24"><path d="M20.5 11.3a7.8 7.8 0 0 1-8 7.9 8.9 8.9 0 0 1-3.2-.6L4 20.5l1.4-4.4a7.7 7.7 0 0 1-1.4-4.5 7.8 7.8 0 0 1 8-7.8 7.8 7.8 0 0 1 8.5 7.5Z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10.5V17M12 7.2h.01"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2.8c.7 4.8 3.4 7.5 8.2 8.2-4.8.7-7.5 3.4-8.2 8.2-.7-4.8-3.4-7.5-8.2-8.2 4.8-.7 7.5-3.4 8.2-8.2Z"/></symbol>
+    <symbol id="i-sunrise" viewBox="0 0 24 24"><path d="M3 19h18M5.5 15.5h13M8 19a4 4 0 0 1 8 0M12 3v3M5.3 8.3l1.4 1.4M18.7 8.3l-1.4 1.4M2.5 15.5h1M20.5 15.5h1"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13.2 2.8-8 11h6.4l-.8 7.4 8-11h-6.4l.8-7.4Z"/></symbol>
+    <symbol id="i-trend-down" viewBox="0 0 24 24"><path d="M4 7.5 10 14l3.5-3.5L20 17"/><path d="M15 17h5v-5"/></symbol>
+  </svg>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand brand--top" href="#/home" aria-label="Вадим, фитнес тренер — на главную">
+        <span class="brand-name">Вадим</span>
+        <span class="brand-sub">фитнес тренер</span>
+      </a>
+      <button class="icon-button theme-toggle" type="button" data-action="theme" aria-label="Переключить тему" title="Переключить тему">
+        <svg class="icon theme-icon theme-icon-sun" aria-hidden="true"><use href="#i-sun"></use></svg>
+        <svg class="icon theme-icon theme-icon-moon" aria-hidden="true"><use href="#i-moon"></use></svg>
+      </button>
+    </div>
+  </header>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Профиль и навигация">
+      <a class="brand brand--side" href="#/home" aria-label="Вадим, фитнес тренер — на главную">
+        <span class="brand-name">Вадим</span>
+        <span class="brand-sub">фитнес тренер</span>
+      </a>
+      <nav class="side-nav" aria-label="Боковая навигация">
+        <a class="nav-link" href="#/home" data-nav="home" aria-current="page">
+          <svg class="icon" aria-hidden="true"><use href="#i-home"></use></svg><span>Главная</span>
+        </a>
+        <a class="nav-link" href="#/workouts" data-nav="workouts">
+          <svg class="icon" aria-hidden="true"><use href="#i-dumbbell"></use></svg><span>Тренировки</span>
+        </a>
+        <a class="nav-link" href="#/nutrition" data-nav="nutrition">
+          <svg class="icon" aria-hidden="true"><use href="#i-apple"></use></svg><span>Питание</span>
+        </a>
+        <a class="nav-link" href="#/supplements" data-nav="supplements">
+          <svg class="icon" aria-hidden="true"><use href="#i-pill"></use></svg><span>Добавки</span>
+        </a>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="side-theme" type="button" data-action="theme" aria-label="Переключить тему" title="Переключить тему">
+          <span class="side-theme-label">
+            <svg class="icon theme-icon theme-icon-sun" aria-hidden="true"><use href="#i-sun"></use></svg>
+            <svg class="icon theme-icon theme-icon-moon" aria-hidden="true"><use href="#i-moon"></use></svg>
+            <span>Тема</span>
+          </span>
+          <span class="theme-switch" aria-hidden="true"><span class="theme-switch-knob"></span></span>
+        </button>
+        <div class="client-card">
+          <span class="avatar avatar--client" aria-hidden="true">А</span>
+          <span class="client-copy">
+            <strong>Алексей</strong>
+            <span>32 года · 180 см</span>
+            <span class="client-goal">Цель: снизить вес</span>
+          </span>
+        </div>
+      </div>
+    </aside>
+    <main class="main" id="main" tabindex="-1">
+      <div class="page">
+        <section class="screen" id="screen-home" data-screen="home" aria-labelledby="home-title" hidden></section>
+        <section class="screen" id="screen-workouts" data-screen="workouts" aria-labelledby="workouts-title" hidden></section>
+        <section class="screen" id="screen-nutrition" data-screen="nutrition" aria-labelledby="nutrition-title" hidden></section>
+        <section class="screen" id="screen-supplements" data-screen="supplements" aria-labelledby="supplements-title" hidden></section>
+        <footer class="app-footer">Демо-версия интерфейса · все данные вымышлены</footer>
+      </div>
+    </main>
+  </div>
+  <nav class="bottom-nav" aria-label="Основная навигация">
+    <div class="bottom-inner">
+      <a class="tab" href="#/home" data-nav="home" aria-current="page">
+        <svg class="icon" aria-hidden="true"><use href="#i-home"></use></svg><span>Главная</span>
+      </a>
+      <a class="tab" href="#/workouts" data-nav="workouts">
+        <svg class="icon" aria-hidden="true"><use href="#i-dumbbell"></use></svg><span>Тренировки</span>
+      </a>
+      <a class="tab" href="#/nutrition" data-nav="nutrition">
+        <svg class="icon" aria-hidden="true"><use href="#i-apple"></use></svg><span>Питание</span>
+      </a>
+      <a class="tab" href="#/supplements" data-nav="supplements">
+        <svg class="icon" aria-hidden="true"><use href="#i-pill"></use></svg><span>Добавки</span>
+      </a>
+    </div>
+  </nav>
+  <div id="workout-dock" hidden></div>
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script>(() => {
+  "use strict";
+  const D = (n, g, p, f, c) => ({ n, g, p, f, c, k: Math.round(p * 4 + f * 9 + c * 4) });
+  const E = (name, muscle, rest, sets, tip) => ({ name, muscle, rest, sets, tip });
+  const S = (title, duration, intensity, muscles, coachNote, exercises) => ({ title, duration, intensity, muscles, coachNote, exercises });
+  const R = (extra, homeTip, tip, ideas) => ({ rest: true, extra, homeTip, tip, ideas });
+  const T = (group, name, dose, how, why, note) => ({ group, name, dose, how, why, note });
+  const DATA = {
+    client: { name: "Алексей", age: 32, height: 180, goal: "Снизить вес" },
+    coach: { name: "Вадим" },
+    targets: { kcal: 2100, protein: 160, fat: 65, carbs: 220, water: 8 },
+    goal: {
+      title: "Снизить вес",
+      start: 92, current: 86.4, target: 80,
+      history: [92, 91.4, 90.8, 90.1, 89, 88.1, 87.2, 86.4],
+    },
+    message: {
+      from: "Вадим",
+      text: "Алексей, ты уже прошёл половину пути к цели — и дело не только в цифре. Ты стал стабильнее в питании и не пропускаешь тренировки. На этой неделе не гонись за результатом: сохрани силы и сон. Я рядом.",
+      time: "Вчера, 20:10",
+    },
+    nutritionAdvice: "Держим небольшой дефицит: около 2 100 ккал в день. Без резких ограничений — так вес уходит стабильнее.",
+    mealTimes: [
+      { name: "Завтрак", time: "08:00" }, { name: "Перекус", time: "11:00" }, { name: "Обед", time: "13:30" },
+      { name: "Полдник", time: "16:30" }, { name: "Ужин", time: "19:30" },
+    ],
+    nutritionTips: [
+      "Добавляй белок к каждому приёму пищи — так проще добрать норму без переедания.",
+      "Углеводы не убираем: они дают энергию для силовой части тренировки.",
+      "Если голодно между приёмами, начни со стакана воды и подожди 10 минут.",
+    ],
+    menus: [
+      [
+        [D("Овсяная каша с бананом", 405, 9.75, 4.24, 67.9), D("Творог 5%", 110, 18.7, 5.5, 3.3)],
+        [D("Греческий йогурт с грушей", 325, 17.38, 3.65, 24.12), D("Миндаль", 30, 6.3, 15, 6.6)],
+        [D("Куриная грудка с гречкой", 330, 43.03, 6.5, 44.08), D("Салат из свежих овощей с оливковым маслом", 170, 2.33, 15.29, 6.97)],
+        [D("Творог 2% с яблоком", 300, 24.96, 3.03, 22.88)],
+        [D("Треска с картофелем", 375, 33.57, 1.36, 34.65), D("Овощной гарнир с оливковым маслом", 215, 3.08, 10.4, 9.22)],
+      ],
+      [
+        [D("Омлет с помидорами", 250, 14.82, 11.04, 6.74), D("Тост цельнозерновой", 60, 5.4, 1.92, 25.8)],
+        [D("Творог 5% с грушей", 310, 29.6, 8.64, 21.9), D("Грецкие орехи", 10, 1.5, 6.5, 1.4)],
+        [D("Индейка с рисом", 400, 54.1, 7.86, 60.5), D("Овощной салат с оливковым маслом", 158, 2.25, 8.29, 6.75)],
+        [D("Протеиновый коктейль на кефире", 270, 23.5, 3.5, 11.6), D("Яблоко", 150, 0.6, 0.3, 16.5), D("Банан", 110, 1.65, 0.22, 23.1)],
+        [D("Лосось с картофелем", 300, 24, 13.2, 33), D("Салат с авокадо", 175, 2.75, 4.05, 8.25)],
+      ],
+      [
+        [D("Гречневая каша на молоке", 260, 10.5, 2.78, 40.9), D("Омлет с сыром и помидорами", 235, 19.97, 16.85, 4.66)],
+        [D("Йогурт с ягодами", 320, 11.2, 6.76, 18.6), D("Грецкие орехи", 15, 2.25, 9.75, 2.1)],
+        [D("Индейка с макаронами", 365, 45.88, 7, 72.28), D("Овощной салат с оливковым маслом", 157, 2.25, 7.29, 6.75)],
+        [D("Творог 2% с апельсином", 280, 19.62, 2.18, 18.08)],
+        [D("Куриная грудка с булгуром", 330, 46.49, 5.61, 47.5), D("Овощной гарнир с оливковым маслом", 206, 3, 6.39, 9)],
+      ],
+      [
+        [D("Овсяная каша с яблоком", 375, 7.48, 3.97, 48.15), D("Яичница с сыром", 120, 16.98, 15.07, 0.84)],
+        [D("Творог 5% с киви", 290, 25.45, 7.75, 19.95), D("Семечки подсолнечника", 10, 2.1, 5.3, 1)],
+        [D("Говядина с булгуром", 320, 39.69, 16.17, 47.5), D("Овощной салат с оливковым маслом", 159, 2.33, 4.31, 6.97)],
+        [D("Протеиновый коктейль", 215, 18, 2.75, 11.2), D("Банан", 115, 1.73, 0.23, 24.15), D("Хлеб цельнозерновой", 35, 3.15, 1.12, 15.05)],
+        [D("Минтай с картофелем", 410, 37.65, 2.12, 36.3), D("Овощной гарнир с оливковым маслом", 211, 3.08, 6.4, 9.22)],
+      ],
+      [
+        [D("Сырники", 275, 36.85, 14.63, 13.2), D("Ягоды с мёдом", 140, 1.12, 0.3, 40.8)],
+        [D("Кефир", 250, 7.5, 2.5, 10), D("Хлеб цельнозерновой", 60, 5.4, 1.92, 25.8), D("Яблоко", 135, 0.54, 0.27, 14.85)],
+        [D("Куриная грудка с киноа", 310, 45.62, 8.1, 38.34), D("Овощной салат с оливковым маслом", 160, 2.25, 10.29, 6.75)],
+        [D("Творог 2% с бананом", 280, 32.25, 3.62, 29.05), D("Миндаль", 15, 3.15, 7.5, 3.3)],
+        [D("Омлет с овощами и сыром", 345, 19.63, 14.43, 11.34), D("Хлеб цельнозерновой", 60, 5.4, 1.92, 25.8)],
+      ],
+      [
+        [D("Рисовая каша на молоке", 290, 8, 1.92, 46), D("Творог 5%", 100, 17, 5, 3), D("Груша", 125, 0.62, 0.12, 15)],
+        [D("Йогурт с бананом", 305, 11.57, 6.61, 31.05), D("Арахис", 10, 2.6, 4.9, 1.6)],
+        [D("Лосось с рисом", 295, 30.12, 17.39, 45.38), D("Овощной салат с оливковым маслом", 190, 2.7, 10.35, 8.1)],
+        [D("Протеиновый коктейль на кефире", 230, 30, 3.5, 10.4), D("Яблоко", 125, 0.5, 0.25, 13.75)],
+        [D("Индейка с гречкой", 355, 56.48, 9.12, 35.88), D("Овощной гарнир с оливковым маслом", 205, 3, 5.4, 9)],
+      ],
+      [
+        [D("Овсяная каша с творогом и ягодами", 425, 26.5, 5.92, 42.48), D("Яйцо всмятку", 60, 7.56, 6.3, 0.48)],
+        [D("Йогурт с бананом", 280, 11.2, 6.56, 25.8), D("Семечки подсолнечника", 15, 3.15, 7.95, 1.5)],
+        [D("Куриная грудка с кускусом", 380, 59.8, 6.88, 46.4), D("Овощной салат с оливковым маслом", 165, 2.25, 15.29, 6.75)],
+        [D("Кефир", 250, 7.5, 2.5, 10), D("Хлеб цельнозерновой", 60, 5.4, 1.92, 25.8), D("Груша", 140, 0.7, 0.14, 16.8)],
+        [D("Треска с картофелем", 400, 36.44, 1.48, 36.3), D("Овощной гарнир с оливковым маслом", 210, 3, 10.39, 9)],
+      ],
+    ],
+    supplements: {
+      courseWeeks: 8, currentWeek: 3,
+      groups: [
+        { name: "Утром", icon: "sunrise" }, { name: "До тренировки", icon: "bolt" },
+        { name: "После тренировки", icon: "spark" }, { name: "Вечером", icon: "moon" },
+      ],
+      items: [
+        T(0, "Витамин D3", "2000 МЕ", "1 капля с завтраком, запить водой", "Поддерживает иммунитет, кости и настроение.", "Принимай вместе с едой, содержащей жиры."),
+        T(0, "Омега-3", "1000 мг", "2 капсулы после завтрака", "Поддерживает сердце и сосуды, помогает восстановлению.", "Храни в прохладном месте, вдали от света."),
+        T(1, "Креатин моногидрат", "5 г", "Размешай в 250 мл воды за 30–40 минут до тренировки", "Помогает держать силу и выносливость на последних подходах.", "В дни отдыха принимай утром — эффективность не зависит от времени."),
+        T(2, "Сывороточный протеин", "25 г", "Смешай с водой или кефиром в течение часа после тренировки", "Помогает добрать суточную норму белка и быстрее восстановиться.", "В дни отдыха — между приёмами пищи. Учитывай белок: твоя цель — около 160 г в день."),
+        T(3, "Магний", "200 мг", "Прими за час до сна", "Помогает расслабиться и улучшает качество сна.", "Не совмещай с алкоголем и кальциевыми добавками в один приём."),
+      ],
+      disclaimer: "Рекомендации составлены тренером и носят информационный характер. Перед приёмом добавок проконсультируйтесь с врачом.",
+    },
+    schedule: [
+      S("Верх тела: грудь и спина", 60, "Средняя", ["Грудь", "Спина", "Плечи"],
+        "Сегодня работаем спокойно и технично. Если поясница включается в тяге, снизь вес на 5 кг — техника важнее цифры.", [
+          E("Жим штанги лёжа", "Грудь", 90, [[10, 40], [10, 40], [8, 45], [8, 45]], "Сведи лопатки и держи стопы на полу. Опускай штангу подконтрольно, без отрыва таза от скамьи."),
+          E("Тяга штанги в наклоне", "Спина", 90, [[10, 35], [10, 35], [10, 35], [8, 40]], "Наклоняйся от таза и держи спину прямой. Тяни снаряд к поясу, а не к груди."),
+          E("Жим гантелей на наклонной скамье", "Грудь", 75, [[12, 14], [12, 14], [10, 16]], "Опускай гантели до уровня груди и не своди локти внутрь. В верхней точке не стукай снарядами."),
+          E("Тяга в блочном тренажёре к поясу", "Спина", 75, [[12, 30], [12, 30], [12, 30]], "Веди локти назад и вниз, корпус почти неподвижен. Сожми лопатки на секунду в конце."),
+          E("Разведения гантелей лёжа", "Грудь", 60, [[15, 8], [15, 8], [15, 8]], "Держи локти чуть согнутыми и не разводи руки слишком широко. Работай в комфортной амплитуде."),
+          E("Планка", "Кор", 45, [["40 с", null], ["40 с", null], ["40 с", null]], "Подтяни рёбра к тазу и держи поясницу нейтральной. Лучше 30 секунд идеально, чем минута с провисом."),
+        ]),
+      S("Ноги и ягодицы", 65, "Высокая", ["Ноги", "Ягодицы", "Кор"],
+        "Держи темп ровным, без рывков. Следи за дыханием: усилие на выдохе, возврат на вдохе.", [
+          E("Приседания со штангой", "Ноги", 120, [[8, 50], [8, 50], [6, 55], [6, 55]], "Колени идут по носкам, вес — на всей стопе. Опускайся до параллели, если позволяет подвижность."),
+          E("Румынская тяга со штангой", "Ягодицы", 90, [[10, 45], [10, 45], [10, 45], [10, 45]], "Отводи таз назад, сохраняя спину прямой. Штанга скользит вдоль ног, колени мягко согнуты."),
+          E("Жим ногами", "Ноги", 90, [[12, 90], [12, 90], [12, 90]], "Не отрывай таз от скамьи и не выпрямляй колени до щелчка. Толкай пятками."),
+          E("Выпады с гантелями", "Ягодицы", 75, [[10, 10], [10, 10], [10, 10]], "Шаг достаточно длинный: впереди колено над стопой, сзади — почти прямое. По 10 повторов на каждую ногу."),
+          E("Ягодичный мост со штангой", "Ягодицы", 75, [[15, 40], [15, 40], [15, 40]], "Упирайся стопами и поднимай таз до прямой линии корпуса. В верхней точке напряги ягодицы."),
+          E("Подъём на носки в тренажёре", "Ноги", 60, [[15, 40], [15, 40], [15, 40]], "Двигайся медленно: пауза вверху и мягкое растяжение внизу. Не пружинь."),
+        ]),
+      R("Активное восстановление", "Середина недели: прогулка, растяжка и спокойный сон.",
+        "Середина недели — время для восстановления. Прогулка 20–30 минут, вода и спокойный сон помогут сохранить ресурс.",
+        ["Прогулка 20–30 минут", "Растяжка 10 минут", "Сон 8 часов"]),
+      S("Плечи, руки и кардио", 55, "Средняя", ["Плечи", "Руки", "Кардио"],
+        "Плечи разогревай тщательно: два подхода с пустыми руками и вращения. В бёрпи не гонись за секундами — держи ровный ритм.", [
+          E("Жим гантелей сидя", "Плечи", 90, [[10, 12], [10, 12], [8, 14], [8, 14]], "Держи спину прижатой к скамье, локти под кистями. Не выталкивай вес рывком."),
+          E("Махи гантелями в стороны", "Плечи", 60, [[15, 6], [15, 6], [15, 6]], "Поднимай руки до уровня плеч, не выше. Корпус неподвижен, движение медленное."),
+          E("Тяга к подбородку с гантелями", "Плечи", 75, [[12, 14], [12, 14], [12, 14]], "Веди локти вверх и в стороны, без рывка. Если тянет в шею — уменьши вес."),
+          E("Подъём гантелей на бицепс", "Руки", 60, [[12, 10], [12, 10], [12, 10]], "Прижимай локти к корпусу и не раскачивайся. На опускании контролируй движение."),
+          E("Разгибание на трицепс в блоке", "Руки", 60, [[12, 15], [12, 15], [12, 15]], "Держи плечи неподвижно и работай только предплечьями. Внизу полностью выпрями руки."),
+          E("Бёрпи", "Кардио", 60, [[10, null], [10, null], [10, null]], "Держи ровный ритм и не проваливай поясницу. Если тяжело — замени прыжок на шаг назад."),
+        ]),
+      R("Лёгкая прогулка 30 мин", "После двух силовых дней — лёгкая прогулка и ранний сон.",
+        "После двух силовых дней мышцам нужно восстановление. Короткая прогулка на свежем воздухе и ранний сон сегодня важнее дополнительной нагрузки.",
+        ["Лёгкая прогулка 30 мин", "Вода 8 стаканов", "Сон 8 часов"]),
+      S("Всё тело: функциональная", 50, "Средняя", ["Всё тело", "Кор"],
+        "Суббота — про качество движения, не про рекорды. Отдыхай столько, сколько нужно, и не работай через боль.", [
+          E("Приседания с гирей", "Ноги", 75, [[12, 16], [12, 16], [12, 16], [12, 16]], "Гиря у груди, локти вниз, спина прямая. Приседай в комфортную глубину, не теряя равновесие."),
+          E("Отжимания от скамьи", "Грудь", 60, [[12, null], [12, null], [12, null], [12, null]], "Держи корпус одной линией, локти под углом около 45 градусов. Упрости, если провисает таз."),
+          E("Тяга гири к поясу", "Спина", 60, [[10, 16], [10, 16], [10, 16]], "Опирайся одной рукой и тяни гирю к поясу. Не разворачивай корпус вслед за снарядом."),
+          E("Обратные выпады с гантелями", "Ягодицы", 60, [[10, 8], [10, 8], [10, 8]], "Шагай назад, сохраняя корпус вертикально. По 10 повторов на каждую ногу."),
+          E("Скакалка", "Кардио", 45, [["60 с", null], ["60 с", null], ["60 с", null]], "Прыгай невысоко и держи локти ближе к корпусу. Следи за мягким приземлением на носки."),
+          E("Планка с попеременным подъёмом", "Кор", 45, [["30 с", null], ["30 с", null], ["30 с", null]], "Не раскачивай таз: поднимай ногу ровно и сохраняй линию плеч, спины и пяток."),
+        ]),
+      R("Спокойный день", "Заверши неделю спокойно: прогулка, растяжка и ранний сон.",
+        "Заверши неделю в спокойном ритме: прогулка, мягкая растяжка и подготовка к новой неделе. Никаких силовых.",
+        ["Спокойная прогулка", "Мягкая растяжка", "Сон 8 часов"]),
+    ],
+  };
+  const DAY_SHORT = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+  const ROUTES = ["home", "workouts", "nutrition", "supplements"];
+  const PAGE_TITLES = {
+    home: "Главная — Вадим",
+    workouts: "Тренировки — Вадим",
+    nutrition: "Питание — Вадим",
+    supplements: "Добавки — Вадим",
+  };
+  const SCREEN_IDS = {
+    home: "screen-home",
+    workouts: "screen-workouts",
+    nutrition: "screen-nutrition",
+    supplements: "screen-supplements",
+  };
+  const THEME_KEY = "vadim-theme";
+  const NOW = new Date();
+  const TODAY = (NOW.getDay() + 6) % 7;
+  const NOW_MINUTES = NOW.getHours() * 60 + NOW.getMinutes();
+  const intFmt = new Intl.NumberFormat("ru-RU");
+  const oneFmt = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 });
+  const weightFmt = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const longDateFmt = new Intl.DateTimeFormat("ru-RU", { weekday: "long", day: "numeric", month: "long" });
+  const addDays = (date, days) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+  const WEEK_START = addDays(NOW, -TODAY);
+  const WEEK_DATES = DAY_SHORT.map((_, index) => addDays(WEEK_START, index));
+  const SESSION_COUNT = DATA.schedule.filter((day) => !day.rest).length;
+  const STATE = buildState();
+  function buildState() {
+    const finished = DATA.schedule.map((day, index) => !day.rest && index < TODAY);
+    const exerciseDone = DATA.schedule.map((day, index) => {
+      if (!day.exercises) return [];
+      return day.exercises.map(() => finished[index]);
+    });
+    const todayMeals = DATA.mealTimes.map((meal) => NOW_MINUTES >= toMinutes(meal.time));
+    if (!DATA.schedule[TODAY].rest) {
+      const startedCount = NOW.getHours() >= 18 ? 3 : NOW.getHours() >= 11 ? 2 : 0;
+      exerciseDone[TODAY] = DATA.schedule[TODAY].exercises.map((_, index) => index < startedCount);
+    }
+    return {
+      workoutDay: TODAY,
+      foodDay: TODAY,
+      meals: Array.from({ length: 7 }, (_, day) => day < TODAY ? DATA.mealTimes.map(() => true) : day === TODAY ? todayMeals.slice() : DATA.mealTimes.map(() => false)),
+      water: Array.from({ length: 7 }, (_, day) => Array.from({ length: DATA.targets.water }, (_, glass) => day < TODAY || (day === TODAY && glass < 5))),
+      supplements: DATA.supplements.items.map((_, index) => index < 2),
+      finished,
+      exerciseDone,
+      openExercise: null,
+      theme: document.documentElement.dataset.theme === "light" ? "light" : "dark",
+    };
+  }
+  function toMinutes(value) {
+    const parts = value.split(":");
+    return Number(parts[0]) * 60 + Number(parts[1]);
+  }
+  function capitalize(value) {
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+  function plural(number, forms) {
+    const n = Math.abs(number) % 100;
+    const last = n % 10;
+    if (n > 10 && n < 20) return forms[2];
+    if (last > 1 && last < 5) return forms[1];
+    if (last === 1) return forms[0];
+    return forms[2];
+  }
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+  function percent(part, total) {
+    if (!total) return 0;
+    return clamp((part / total) * 100, 0, 100);
+  }
+  function num(value) {
+    return intFmt.format(Math.round(value));
+  }
+  function one(value) {
+    return oneFmt.format(value);
+  }
+  function weight(value) {
+    return weightFmt.format(value);
+  }
+  function icon(name, extraClass = "") {
+    return `<svg class="icon ${extraClass}" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
+  }
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    }[char]));
+  }
+  function formatLongDate(date) {
+    return capitalize(longDateFmt.format(date));
+  }
+  function greetingForHour(hour) {
+    if (hour >= 5 && hour < 12) return "Доброе утро";
+    if (hour >= 12 && hour < 18) return "Добрый день";
+    if (hour >= 18) return "Добрый вечер";
+    return "Доброй ночи";
+  }
+  function getNextMeal() {
+    for (let index = 0; index < DATA.mealTimes.length; index += 1) {
+      if (toMinutes(DATA.mealTimes[index].time) > NOW_MINUTES) {
+        return { day: TODAY, index, label: "сегодня" };
+      }
+    }
+    return { day: (TODAY + 1) % 7, index: 0, label: "завтра" };
+  }
+  function getNextWorkout(fromDay = TODAY) {
+    for (let offset = 1; offset <= 7; offset += 1) {
+      const index = (fromDay + offset) % 7;
+      if (!DATA.schedule[index].rest) {
+        return {
+          index,
+          offset,
+          date: addDays(WEEK_DATES[fromDay], offset),
+          inWeek: fromDay + offset < 7,
+          session: DATA.schedule[index],
+        };
+      }
+    }
+    return null;
+  }
+  function sumDishes(dishes) {
+    const totals = dishes.reduce((total, dish) => ({
+      p: total.p + dish.p,
+      f: total.f + dish.f,
+      c: total.c + dish.c,
+    }), { p: 0, f: 0, c: 0 });
+    totals.kcal = Math.round(totals.p * 4 + totals.f * 9 + totals.c * 4);
+    return totals;
+  }
+  function menuTotals(dayIndex) {
+    return DATA.menus[dayIndex].map((dishes) => sumDishes(dishes));
+  }
+  function planTotals(dayIndex) {
+    const meals = menuTotals(dayIndex);
+    const totals = meals.reduce((total, meal) => ({
+      p: total.p + meal.p,
+      f: total.f + meal.f,
+      c: total.c + meal.c,
+    }), { p: 0, f: 0, c: 0 });
+    totals.kcal = Math.round(totals.p * 4 + totals.f * 9 + totals.c * 4);
+    return totals;
+  }
+  function eatenTotals(dayIndex) {
+    const meals = menuTotals(dayIndex);
+    const totals = meals.reduce((total, meal, index) => {
+      if (!STATE.meals[dayIndex][index]) return total;
+      return {
+        p: total.p + meal.p,
+        f: total.f + meal.f,
+        c: total.c + meal.c,
+      };
+    }, { p: 0, f: 0, c: 0 });
+    totals.kcal = Math.round(totals.p * 4 + totals.f * 9 + totals.c * 4);
+    return totals;
+  }
+  function eatenMealCount(dayIndex) {
+    return STATE.meals[dayIndex].filter(Boolean).length;
+  }
+  function waterCount(dayIndex) {
+    return STATE.water[dayIndex].filter(Boolean).length;
+  }
+  function supplementsTaken() {
+    return STATE.supplements.filter(Boolean).length;
+  }
+  function workoutsDone() {
+    return STATE.finished.filter(Boolean).length;
+  }
+  function ringMarkup(value, options = {}) {
+    const size = options.size || 52;
+    const stroke = options.stroke || 4.5;
+    const label = options.label || "";
+    const offset = (100 - clamp(value, 0, 100)).toFixed(2);
+    return `
+      <span class="ring" style="--ring-size:${size}px;--ring-stroke:${stroke}px" aria-hidden="true">
+        <svg viewBox="0 0 44 44">
+          <circle class="ring-track" cx="22" cy="22" r="18" pathLength="100"></circle>
+          <circle class="ring-value" cx="22" cy="22" r="18" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" data-ring data-offset="${offset}" transform="rotate(-90 22 22)"></circle>
+        </svg>
+        ${label ? `<span class="ring-center">${label}</span>` : ""}
+      </span>`;
+  }
+  function animateRings(root) {
+    const rings = root.querySelectorAll("[data-ring]");
+    if (!rings.length) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        rings.forEach((ring) => {
+          ring.style.strokeDashoffset = ring.dataset.offset;
+        });
+      });
+    });
+  }
+  function macroRows(macros) {
+    const rows = [
+      { label: "Белки", letter: "Б", value: macros.p, target: DATA.targets.protein, tone: "protein" },
+      { label: "Жиры", letter: "Ж", value: macros.f, target: DATA.targets.fat, tone: "fat" },
+      { label: "Углеводы", letter: "У", value: macros.c, target: DATA.targets.carbs, tone: "carb" },
+    ];
+    return `
+      <div class="macro-list">
+        ${rows.map((row, index) => `
+          <div class="macro-row macro-row--${row.tone}">
+            <div class="macro-label">
+              <span><i class="macro-dot"></i><span class="macro-letter">${row.letter}</span>${row.label}</span>
+              <span><b>${one(row.value)}</b> <span class="macro-target">/ ${one(row.target)} г</span></span>
+            </div>
+            <div class="bar-track" aria-hidden="true">
+              <span class="bar-fill bar-fill--${row.tone}" style="--bar-w:${percent(row.value, row.target)}%"></span>
+            </div>
+          </div>`).join("")}
+      </div>`;
+  }
+  function weekStrip(selected, action) {
+    return `
+      <div class="week-strip" role="group" aria-label="Дни недели">
+        ${DAY_SHORT.map((label, index) => {
+          const day = DATA.schedule[index];
+          const isToday = index === TODAY;
+          const status = day.rest ? "rest" : STATE.finished[index] ? "done" : isToday ? "today" : index < TODAY ? "done" : "planned";
+          const date = WEEK_DATES[index];
+          const selectedClass = selected === index ? " is-selected" : "";
+          const ariaStatus = day.rest ? "отдых" : status === "done" ? "тренировка завершена" : status === "today" ? "тренировка сегодня" : "запланирована";
+          const stateIcon = status === "done" ? icon("check") : status === "rest" ? icon("moon") : `<span class="day-dot ${status === "planned" ? "day-dot--hollow" : ""}"></span>`;
+          return `
+            <button class="day-button is-${status}${isToday ? " is-today" : ""}${selectedClass}" type="button"
+              data-action="${action}" data-day="${index}" data-focus="workout-day-${index}"
+              aria-label="${formatLongDate(date)}${isToday ? ", сегодня" : ""}, ${ariaStatus}">
+              <span class="day-name">${label}</span>
+              <span class="day-date">${date.getDate()}</span>
+              <span class="day-state" aria-hidden="true">${stateIcon}</span>
+            </button>`;
+        }).join("")}
+      </div>`;
+  }
+  function foodDays(selected) {
+    return `
+      <div class="food-days" role="group" aria-label="Выбор дня меню">
+        ${DAY_SHORT.map((label, index) => {
+          const date = WEEK_DATES[index];
+          const isToday = index === TODAY;
+          const pressed = selected === index;
+          return `
+            <button class="food-day${isToday ? " is-today" : ""}" type="button"
+              data-action="pick-food-day" data-day="${index}" data-focus="food-day-${index}"
+              aria-pressed="${pressed}" aria-label="${formatLongDate(date)}${isToday ? ", сегодня" : ""}">
+              <span class="food-day-name">${label}</span>
+              <span class="food-day-date">${date.getDate()}</span>
+            </button>`;
+        }).join("")}
+      </div>`;
+  }
+  function coachNoteCard(text) {
+    return `
+      <aside class="note-card card" aria-label="Заметка от тренера">
+        <div class="note-head">
+          <span class="avatar avatar--sm avatar--coach" aria-hidden="true">В</span>
+          <div class="note-ident"><strong>Вадим</strong><span>твой тренер</span></div>
+        </div>
+        <p class="note-text">${escapeHtml(text)}</p>
+        <p class="note-sign">Заметка к тренировке</p>
+      </aside>`;
+  }
+  function statTile({ href, route, label, iconName, value, spoken, meta, visual = "", quick = "" }) {
+    return `
+      <article class="stat-card card${quick ? " stat-card--water" : ""}">
+        <a class="stat-link" href="${href}" data-nav="${route}" data-focus="${route}-stat" aria-label="${label}: ${spoken}">
+          <span class="stat-top">${icon(iconName)}<span>${label}</span>${icon("chevron-right", "stat-chevron")}</span>
+          <span class="stat-main">
+            <span>
+              <span class="stat-value">${value}</span>
+              <span class="stat-meta">${meta}</span>
+            </span>
+            ${visual ? `<span class="stat-viz" aria-hidden="true">${visual}</span>` : ""}
+          </span>
+        </a>
+        ${quick}
+      </article>`;
+  }
+  function miniBars(filled, total) {
+    return `<span class="stat-mini-bars">${Array.from({ length: total }, (_, index) => `<span class="${index < filled ? "is-filled" : ""}"></span>`).join("")}</span>`;
+  }
+  function miniDots(filled, total) {
+    return `<span class="stat-dots">${Array.from({ length: total }, (_, index) => `<i class="${index < filled ? "is-filled" : ""}"></i>`).join("")}</span>`;
+  }
+  function homeView() {
+    const session = DATA.schedule[TODAY];
+    const eaten = eatenTotals(TODAY);
+    const workouts = workoutsDone();
+    const water = waterCount(TODAY);
+    const supplementCount = supplementsTaken();
+    const caloriePercent = percent(eaten.kcal, DATA.targets.kcal);
+    const calorieRing = ringMarkup(caloriePercent, { size: 42, stroke: 4 });
+    const todayExercises = session.rest ? null : STATE.exerciseDone[TODAY].filter(Boolean).length;
+    const trainingMeta = session.rest
+      ? "на неделе"
+      : `на неделе<span class="stat-extra">сегодня ${todayExercises} из ${session.exercises.length}</span>`;
+    const waterFull = water >= DATA.targets.water;
+    const stats = `
+      <div class="stats-grid">
+        ${statTile({
+          href: "#/nutrition", route: "nutrition", label: "Калории", iconName: "flame",
+          value: num(eaten.kcal), spoken: `${num(eaten.kcal)} из ${num(DATA.targets.kcal)} ккал`,
+          meta: `из ${num(DATA.targets.kcal)} ккал`, visual: calorieRing,
+        })}
+        ${statTile({
+          href: "#/nutrition", route: "nutrition", label: "Вода", iconName: "drop",
+          value: `${water} <span class="stat-divider">/</span> ${DATA.targets.water}`,
+          spoken: `${water} из ${DATA.targets.water} стаканов`, meta: "стаканов",
+          quick: `<button class="stat-quick" type="button" data-action="add-water" data-day="${TODAY}" data-focus="water-add" aria-disabled="${waterFull}" aria-label="${waterFull ? "Норма воды на сегодня выполнена" : "Добавить стакан воды"}">${icon(waterFull ? "check" : "plus")}</button>`,
+        })}
+        ${statTile({
+          href: "#/workouts", route: "workouts", label: "Тренировки", iconName: "dumbbell",
+          value: `${workouts} <span class="stat-divider">/</span> ${SESSION_COUNT}`,
+          spoken: `${workouts} из ${SESSION_COUNT} тренировок на неделе${todayExercises === null ? "" : `, сегодня ${todayExercises} из ${session.exercises.length}`}`,
+          meta: trainingMeta,
+          visual: miniBars(workouts, SESSION_COUNT),
+        })}
+        ${statTile({
+          href: "#/supplements", route: "supplements", label: "Добавки", iconName: "pill",
+          value: `${supplementCount} <span class="stat-divider">/</span> ${DATA.supplements.items.length}`,
+          spoken: `${supplementCount} из ${DATA.supplements.items.length} добавок сегодня`, meta: "сегодня",
+          visual: miniDots(supplementCount, DATA.supplements.items.length),
+        })}
+      </div>`;
+    return `
+      <div class="screen-head">
+        <span class="eyebrow"><span class="eyebrow-dot"></span>${formatLongDate(WEEK_DATES[TODAY])}</span>
+        <h1 class="home-title" id="home-title" tabindex="-1">${greetingForHour(NOW.getHours())}, <span class="home-name">${DATA.client.name}</span></h1>
+      </div>
+      <div class="dash-grid">
+        ${session.rest ? restTodayCard(session) : workoutTodayCard(session)}
+        ${stats}
+        ${goalCard()}
+        <article class="macro-card card" aria-label="Макросы за сегодня">
+          <div class="card-head"><h2 class="card-title">Макросы сегодня</h2><span class="card-hint">из нормы</span></div>
+          ${macroRows(eaten)}
+        </article>
+        <article class="week-card card">
+          <div class="card-head">
+            <h2 class="card-title">Тренировочная неделя</h2>
+            <span class="card-hint">${workouts} из ${SESSION_COUNT} ${plural(SESSION_COUNT, ["тренировки", "тренировок", "тренировок"])}</span>
+          </div>
+          ${weekStrip(null, "open-workout")}
+        </article>
+        <div class="home-side">
+          ${messageCard()}
+          ${nextMealCard()}
+        </div>
+      </div>`;
+  }
+  function workoutTodayCard(session) {
+    const total = session.exercises.length;
+    const finished = STATE.finished[TODAY];
+    return `
+      <article class="today-card card${finished ? " today-card--done" : ""}">
+        <span class="hero-art" aria-hidden="true"></span>
+        <div class="hero-content">
+          <div class="hero-top">
+            <span class="hero-tag"><span class="eyebrow-dot"></span>Сегодня · ${DAY_SHORT[TODAY]}</span>
+            <span class="hero-status">${finished ? "Завершена" : session.intensity}</span>
+          </div>
+          <h2 class="today-title">${escapeHtml(session.title)}</h2>
+          <div class="hero-meta">
+            <span>${icon("clock")}${session.duration} мин</span>
+            <span>${icon("dumbbell")}${total} ${plural(total, ["упражнение", "упражнения", "упражнений"])}</span>
+          </div>
+          <div class="hero-chips">${session.muscles.map((muscle) => `<span class="chip">${escapeHtml(muscle)}</span>`).join("")}</div>
+          <button class="btn btn--primary hero-action" type="button" data-action="open-workout" data-day="${TODAY}">
+            Открыть тренировку ${icon("arrow-right")}
+          </button>
+        </div>
+      </article>`;
+  }
+  function restTodayCard(session) {
+    const next = getNextWorkout(TODAY);
+    const nextMarkup = next ? nextWorkoutMini(next, "open-workout") : "";
+    return `
+      <article class="today-card today-card--rest card">
+        <span class="hero-art" aria-hidden="true"></span>
+        <div class="hero-content">
+          <div class="hero-top">
+            <span class="hero-tag"><span class="eyebrow-dot"></span>Сегодня · ${DAY_SHORT[TODAY]}</span>
+            <span class="rest-badge" aria-hidden="true">${icon("moon")}</span>
+          </div>
+          <h2 class="today-title">День восстановления</h2>
+          <p class="today-copy">${escapeHtml(session.homeTip || session.tip)}</p>
+          <div class="hero-chips">
+            ${(session.ideas || []).slice(0, 2).map((idea) => `<span class="chip">${escapeHtml(idea)}</span>`).join("")}
+          </div>
+          ${nextMarkup}
+        </div>
+      </article>`;
+  }
+  function nextWorkoutMini(next, action) {
+    const copy = `
+      <span class="hero-next-copy">
+        <span>Следующая тренировка</span>
+        <strong>${DAY_SHORT[next.index]} · ${escapeHtml(next.session.title)}</strong>
+        <small>${next.session.duration} мин · ${next.session.exercises.length} ${plural(next.session.exercises.length, ["упражнение", "упражнения", "упражнений"])}</small>
+      </span>
+      <span class="hero-next-icon" aria-hidden="true">${icon("arrow-right")}</span>`;
+    if (next.inWeek) {
+      return `<button class="hero-next" type="button" data-action="${action}" data-day="${next.index}">${copy}</button>`;
+    }
+    return `<div class="hero-next">${copy}</div>`;
+  }
+  function goalCard() {
+    const start = DATA.goal.start;
+    const current = DATA.goal.current;
+    const target = DATA.goal.target;
+    const progress = percent(start - current, start - target);
+    const lost = start - current;
+    const left = current - target;
+    const values = DATA.goal.history;
+    const width = 640;
+    const height = 142;
+    const minValue = 78;
+    const maxValue = 93;
+    const padded = 10;
+    const points = values.map((value, index) => {
+      const x = padded + index * ((width - padded * 2) / (values.length - 1));
+      const y = padded + ((maxValue - value) / (maxValue - minValue)) * (height - padded * 2);
+      return [x, y];
+    });
+    const line = points.reduce((path, point, index) => {
+      if (index === 0) return `M${point[0].toFixed(1)} ${point[1].toFixed(1)}`;
+      const previous = points[index - 1];
+      const middle = (previous[0] + point[0]) / 2;
+      return `${path} C${middle.toFixed(1)} ${previous[1].toFixed(1)}, ${middle.toFixed(1)} ${point[1].toFixed(1)}, ${point[0].toFixed(1)} ${point[1].toFixed(1)}`;
+    }, "");
+    const area = `${line} L${points[points.length - 1][0].toFixed(1)} ${height - 2} L${points[0][0].toFixed(1)} ${height - 2} Z`;
+    const gridLines = [84, 87, 90].map((value) => {
+      const y = padded + ((maxValue - value) / (maxValue - minValue)) * (height - padded * 2);
+      return `<line class="chart-grid" x1="${padded}" x2="${width - padded}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}"></line>`;
+    }).join("");
+    return `
+      <article class="goal-card card" aria-labelledby="goal-title">
+        <div class="goal-head">
+          <div>
+            <span class="eyebrow">Прогресс цели</span>
+            <h2 id="goal-title">Цель: снизить вес</h2>
+          </div>
+          <span class="goal-delta">${icon("trend-down")}−${weight(lost)} кг</span>
+        </div>
+        <div class="goal-current">
+          <strong>${weight(current)}<small>кг</small></strong>
+          <div class="goal-remaining">сейчас<br>До цели <b>${weight(left)} кг</b></div>
+        </div>
+        <div class="goal-track-wrap">
+          <div class="goal-track" role="img" aria-label="Прогресс от ${weight(start)} до ${weight(target)} килограммов, сейчас ${weight(current)} килограммов">
+            <span class="goal-fill" style="--goal-p:${progress.toFixed(2)}%"></span>
+            <span class="goal-marker" style="--goal-p:${progress.toFixed(2)}%"></span>
+          </div>
+          <div class="goal-ends"><span>Старт <b>${weight(start)}</b></span><span>Цель <b>${weight(target)}</b></span></div>
+        </div>
+        <figure class="goal-chart" role="img" aria-label="График веса за последние 8 недель: с ${weight(values[0])} до ${weight(values[values.length - 1])} килограммов">
+          <svg viewBox="0 0 ${width} ${height}" aria-hidden="true">
+            <defs>
+              <linearGradient id="weight-area" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" style="stop-color:var(--accent);stop-opacity:.22"></stop>
+                <stop offset="100%" style="stop-color:var(--accent);stop-opacity:0"></stop>
+              </linearGradient>
+            </defs>
+            ${gridLines}
+            <path class="chart-area" d="${area}" fill="url(#weight-area)"></path>
+            <path class="chart-line" pathLength="1" d="${line}"></path>
+            ${points.map((point, index) => `<circle class="chart-dot${index === points.length - 1 ? " chart-dot--last" : ""}" cx="${point[0].toFixed(1)}" cy="${point[1].toFixed(1)}" r="${index === points.length - 1 ? 4 : 2.4}"></circle>`).join("")}
+          </svg>
+          <figcaption class="chart-caption"><span>8 недель назад</span><span><b>−${weight(lost)} кг</b> за 8 недель</span></figcaption>
+        </figure>
+      </article>`;
+  }
+  function messageCard() {
+    return `
+      <article class="message-card card">
+        <div class="message-head">
+          <span class="avatar avatar--sm avatar--coach" aria-hidden="true">В</span>
+          <div class="message-ident"><strong>Сообщение от Вадима</strong><span>${escapeHtml(DATA.message.time)}</span></div>
+          <span class="message-mark" aria-hidden="true">${icon("message")}</span>
+        </div>
+        <p class="message-text">${escapeHtml(DATA.message.text)}</p>
+      </article>`;
+  }
+  function nextMealCard() {
+    const next = getNextMeal();
+    const meal = DATA.mealTimes[next.index];
+    const dish = DATA.menus[next.day][next.index][0];
+    return `
+      <a class="next-meal-card card" href="#/nutrition" data-nav="nutrition" aria-label="Следующий приём пищи: ${next.label}, ${meal.time}, ${meal.name} — ${dish.n}. Открыть питание">
+        <span class="next-meal-time"><strong>${meal.time}</strong><span>${next.label}</span></span>
+        <span class="next-meal-copy">
+          <span class="eyebrow">Следующий приём пищи</span>
+          <strong>${meal.name}</strong>
+          <small>${escapeHtml(dish.n)} · ${dish.g} г</small>
+        </span>
+        <span class="next-meal-arrow" aria-hidden="true">${icon("chevron-right")}</span>
+      </a>`;
+  }
+  function workoutsView() {
+    const day = DATA.schedule[STATE.workoutDay];
+    const isToday = STATE.workoutDay === TODAY;
+    const isFinished = STATE.finished[STATE.workoutDay];
+    return `
+      <div class="screen-head">
+        <span class="eyebrow"><span class="eyebrow-dot"></span>План недели от Вадима</span>
+        <h1 id="workouts-title" tabindex="-1">Тренировки</h1>
+        <p class="screen-sub">${isToday ? "Сегодняшняя тренировка уже готова." : `${formatLongDate(WEEK_DATES[STATE.workoutDay])}.`} Отмечай упражнения и следи за прогрессом.</p>
+      </div>
+      <article class="week-panel card">
+        <div class="card-head">
+          <h2 class="card-title">Неделя</h2>
+          <span class="card-hint">${workoutsDone()} из ${SESSION_COUNT} ${plural(SESSION_COUNT, ["тренировки", "тренировок", "тренировок"])}</span>
+        </div>
+        ${weekStrip(STATE.workoutDay, "select-workout-day")}
+      </article>
+      ${day.rest ? restDayView(STATE.workoutDay) : sessionView(STATE.workoutDay, isFinished)}
+      ${!day.rest && !isFinished ? `<div class="dock-spacer" aria-hidden="true"></div>` : ""}`;
+  }
+  function sessionView(dayIndex, isFinished) {
+    const day = DATA.schedule[dayIndex];
+    const date = WEEK_DATES[dayIndex];
+    const done = STATE.exerciseDone[dayIndex];
+    const doneCount = done.filter(Boolean).length;
+    const total = day.exercises.length;
+    const progress = percent(doneCount, total);
+    const status = isFinished ? "Завершена" : dayIndex === TODAY ? "Сегодня" : "Запланирована";
+    return `
+      <article class="session-card card">
+        <div class="session-topline">
+          <span class="eyebrow">${formatLongDate(date)}${dayIndex === TODAY ? " · сегодня" : ""}</span>
+          <span class="badge${isFinished ? " badge--done" : ""}">${status}</span>
+        </div>
+        <h2 class="session-title">${escapeHtml(day.title)}</h2>
+        <div class="session-meta">
+          <span class="chip">${icon("clock")}${day.duration} мин</span>
+          <span class="chip">${icon("dumbbell")}${total} ${plural(total, ["упражнение", "упражнения", "упражнений"])}</span>
+          <span class="chip">${day.intensity}</span>
+        </div>
+        <div class="session-progress">
+          <div class="progress-label"><span>Прогресс тренировки</span><b>${doneCount} из ${total} ${plural(total, ["упражнение", "упражнения", "упражнений"])}</b></div>
+          <div class="progress-track" role="progressbar" aria-label="Выполнено упражнений" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${doneCount}">
+            <span class="progress-fill" style="--progress:${progress}%"></span>
+          </div>
+        </div>
+      </article>
+      <div class="workout-grid">
+        <div class="workout-main">
+          <div class="section-line"><h2>Упражнения</h2><span>${total} ${plural(total, ["упражнение", "упражнения", "упражнений"])}</span></div>
+          <div class="exercise-list">${day.exercises.map((exercise, index) => exerciseCard(dayIndex, exercise, index, isFinished)).join("")}</div>
+        </div>
+        <aside class="workout-side">${coachNoteCard(day.coachNote)}</aside>
+      </div>`;
+  }
+  function exerciseCard(dayIndex, exercise, index, locked) {
+    const key = `${dayIndex}-${index}`;
+    const open = STATE.openExercise === key;
+    const done = STATE.exerciseDone[dayIndex][index];
+    const first = exercise.sets[0];
+    const weightText = first[1] === null ? "свой вес" : `${one(first[1])} кг`;
+    const summary = `${exercise.sets.length} × ${first[0]} · ${weightText} · отдых ${exercise.rest} с`;
+    const checkLabel = `${done ? "Снять отметку" : "Отметить"} упражнение «${exercise.name}»`;
+    return `
+      <article class="exercise-card card${done ? " is-done" : ""}${open ? " is-open" : ""}">
+        <div class="exercise-row">
+          <button class="exercise-main" type="button" data-action="toggle-exercise" data-day="${dayIndex}" data-index="${index}" data-focus="exercise-toggle-${key}" aria-expanded="${open}" aria-controls="exercise-detail-${key}">
+            <span class="exercise-index">${String(index + 1).padStart(2, "0")}</span>
+            <span class="exercise-info">
+              <span class="exercise-name">${escapeHtml(exercise.name)}</span>
+              <span class="exercise-meta"><span class="chip">${escapeHtml(exercise.muscle)}</span><span class="exercise-summary">${summary}</span></span>
+            </span>
+            <svg class="icon exercise-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+          </button>
+          <button class="exercise-check" type="button" data-action="toggle-exercise-done" data-day="${dayIndex}" data-index="${index}" data-focus="exercise-check-${key}" aria-pressed="${done}" aria-label="${checkLabel}" ${locked ? "disabled" : ""}>
+            ${icon("check")}
+          </button>
+        </div>
+        <div class="exercise-detail" id="exercise-detail-${key}" ${open ? "" : "hidden"}>
+          <div class="exercise-detail-inner">
+            <div class="set-table-wrap">
+              <table class="set-table">
+                <caption class="sr-only">Подходы упражнения ${escapeHtml(exercise.name)}</caption>
+                <thead><tr><th scope="col">Подход</th><th scope="col">Повторы</th><th scope="col">Вес</th></tr></thead>
+                <tbody>${exercise.sets.map((set, setIndex) => `<tr><td>${setIndex + 1}</td><td>${set[0]}</td><td>${set[1] === null ? "—" : `${one(set[1])} кг`}</td></tr>`).join("")}</tbody>
+              </table>
+            </div>
+            <p class="exercise-tip">${icon("spark")}<span><strong>Подсказка тренера.</strong> ${escapeHtml(exercise.tip)}</span></p>
+          </div>
+        </div>
+      </article>`;
+  }
+  function restDayView(dayIndex) {
+    const day = DATA.schedule[dayIndex];
+    const base = Math.max(dayIndex, TODAY);
+    const next = getNextWorkout(base);
+    const nextHtml = next ? restNextCard(next, next.inWeek ? "select-workout-day" : null) : "";
+    return `
+      <article class="rest-card card">
+        <div class="rest-head">
+          <span class="rest-badge" aria-hidden="true">${icon("moon")}</span>
+          <div class="rest-copy">
+            <span class="eyebrow">${formatLongDate(WEEK_DATES[dayIndex])}${dayIndex === TODAY ? " · сегодня" : ""}</span>
+            <h2>${dayIndex === TODAY ? "Сегодня отдых" : "День восстановления"}</h2>
+            <p>${escapeHtml(day.tip)}</p>
+          </div>
+        </div>
+        <div class="rest-ideas">
+          ${day.ideas.map((idea) => `<span>${icon("check")}${escapeHtml(idea)}</span>`).join("")}
+        </div>
+        ${nextHtml}
+        <p class="rest-quote">${icon("message")}<span>Мышцы растут не на тренировке, а во время восстановления. Отнесись к отдыху как к части плана.</span></p>
+      </article>`;
+  }
+  function restNextCard(next, action) {
+    const copy = `
+      <span class="rest-next-copy">
+        <span>Следующая тренировка</span>
+        <strong>${DAY_SHORT[next.index]} · ${escapeHtml(next.session.title)}</strong>
+        <small>${next.session.duration} мин · ${next.session.exercises.length} ${plural(next.session.exercises.length, ["упражнение", "упражнения", "упражнений"])}</small>
+      </span>
+      ${action ? `<span class="rest-next-arrow" aria-hidden="true">${icon("arrow-right")}</span>` : ""}`;
+    return action
+      ? `<button class="rest-next" type="button" data-action="${action}" data-day="${next.index}" aria-label="Открыть тренировку ${DAY_SHORT[next.index]}, ${escapeHtml(next.session.title)}">${copy}</button>`
+      : `<div class="rest-next">${copy}</div>`;
+  }
+  function nutritionView() {
+    const dayIndex = STATE.foodDay;
+    const eaten = eatenTotals(dayIndex);
+    const eatenMeals = eatenMealCount(dayIndex);
+    const caloriePercent = percent(eaten.kcal, DATA.targets.kcal);
+    const remaining = DATA.targets.kcal - eaten.kcal;
+    const dateLabel = formatLongDate(WEEK_DATES[dayIndex]);
+    const water = waterCount(dayIndex);
+    return `
+      <div class="screen-head">
+        <span class="eyebrow"><span class="eyebrow-dot"></span>Дневник питания</span>
+        <h1 id="nutrition-title" tabindex="-1">Питание</h1>
+        <p class="screen-sub">${dateLabel}${dayIndex === TODAY ? " · сегодня" : ""}. Норма и меню уже собраны тренером.</p>
+      </div>
+      <div class="day-picker card">
+        ${foodDays(dayIndex)}
+      </div>
+      <div class="nutrition-layout">
+        <div class="nutrition-main">
+          <article class="target-card card" aria-label="Дневные цели по калориям и макронутриентам">
+            <div class="target-top">
+              <div class="target-copy">
+                <span class="eyebrow">Съедено за день</span>
+                <div class="target-value">${num(eaten.kcal)}<small>/ ${num(DATA.targets.kcal)} ккал</small></div>
+                <div class="target-left">${remaining >= 0 ? `Осталось <b>${num(remaining)} ккал</b>` : `Выше нормы на <b>${num(-remaining)} ккал</b>`}</div>
+              </div>
+              <div class="target-ring">${ringMarkup(caloriePercent, { size: 94, stroke: 5, label: `${Math.round(caloriePercent)}%` })}</div>
+            </div>
+            ${macroRows(eaten)}
+            <p class="advice-line">${icon("spark")}<span>${escapeHtml(DATA.nutritionAdvice)}</span></p>
+          </article>
+          <div class="meal-section">
+            <div class="meal-section-head"><h2>Приёмы пищи</h2><span>${eatenMeals} из ${DATA.mealTimes.length} отмечено</span></div>
+            <div class="meal-list">
+              ${DATA.menus[dayIndex].map((dishes, mealIndex) => mealCard(dayIndex, mealIndex, dishes)).join("")}
+            </div>
+          </div>
+        </div>
+        <aside class="nutrition-side">
+          <article class="water-card card">
+            <div class="water-top">
+              <div>
+                <div class="card-head"><h2 class="card-title">Вода</h2></div>
+                <div class="water-count">${water} <small>/ ${DATA.targets.water}</small></div>
+                <p class="water-copy">${num(water * 250)} мл из 2 л</p>
+              </div>
+            </div>
+            <div class="water-glasses" role="group" aria-label="Отметить выпитые стаканы воды">
+              ${Array.from({ length: DATA.targets.water }, (_, glassIndex) => {
+                const filled = STATE.water[dayIndex][glassIndex];
+                return `<button class="glass-button" type="button" data-action="toggle-water" data-day="${dayIndex}" data-index="${glassIndex}" data-focus="water-${dayIndex}-${glassIndex}" aria-pressed="${filled}" aria-label="Стакан ${glassIndex + 1} из ${DATA.targets.water}">${icon("glass")}</button>`;
+              }).join("")}
+            </div>
+          </article>
+          ${weekCaloriesCard(dayIndex)}
+          ${nutritionTipsCard()}
+        </aside>
+      </div>`;
+  }
+  function mealCard(dayIndex, mealIndex, dishes) {
+    const meal = DATA.mealTimes[mealIndex];
+    const totals = sumDishes(dishes);
+    const eaten = STATE.meals[dayIndex][mealIndex];
+    return `
+      <article class="meal-card card${eaten ? " is-eaten" : ""}">
+        <div class="meal-head">
+          <div class="meal-name-row"><h3>${meal.name}</h3><span class="meal-time">${meal.time}</span></div>
+          <div class="meal-kcal"><span class="meal-kcal-label">Итого</span>${num(totals.kcal)} <span>ккал</span></div>
+        </div>
+        <ul class="dishes">
+          ${dishes.map((dish) => `
+            <li class="dish">
+              <div class="dish-main"><span class="dish-name">${escapeHtml(dish.n)}</span><span class="dish-kcal">${num(dish.k)} ккал</span></div>
+              <div class="dish-meta"><span class="dish-grams">${dish.g} г</span><span class="dish-sep"></span><span>Б ${one(dish.p)}</span><span class="dish-sep"></span><span>Ж ${one(dish.f)}</span><span class="dish-sep"></span><span>У ${one(dish.c)}</span></div>
+            </li>`).join("")}
+        </ul>
+        <div class="meal-foot">
+          <div class="meal-total"><span>Итого за приём</span><strong>Б ${one(totals.p)} · Ж ${one(totals.f)} · У ${one(totals.c)}</strong></div>
+          <button class="meal-toggle" type="button" data-action="toggle-meal" data-day="${dayIndex}" data-index="${mealIndex}" data-focus="meal-${dayIndex}-${mealIndex}" aria-pressed="${eaten}" aria-label="${eaten ? "Снять отметку" : "Отметить"} «${meal.name}»">
+            ${icon(eaten ? "check" : "plus")}${eaten ? "Съедено" : "Съел"}
+          </button>
+        </div>
+      </article>`;
+  }
+  function weekCaloriesCard(selected) {
+    const calorieMax = 2350;
+    const targetLine = (DATA.targets.kcal / calorieMax) * 100;
+    const days = DAY_SHORT.map((label, index) => {
+      const eaten = eatenTotals(index).kcal;
+      const plan = planTotals(index).kcal;
+      return {
+        label,
+        eaten,
+        plan,
+        height: clamp((eaten / calorieMax) * 100, 0, 100),
+        planLine: clamp((plan / calorieMax) * 100, 0, 100),
+      };
+    });
+    const a11y = days.map((day) => `${day.label}: ${num(day.eaten)}`).join(", ");
+    return `
+      <article class="week-chart-card card">
+        <div class="card-head"><h2 class="card-title">Калории за неделю</h2><span class="card-hint">цель ${num(DATA.targets.kcal)}</span></div>
+        <div class="week-chart" role="img" aria-label="Съедено калорий: ${a11y}. Цель ${num(DATA.targets.kcal)} калорий.">
+          <div class="chart-target-line" style="--target-line:${targetLine}%"><span>${num(DATA.targets.kcal)}</span></div>
+          <div class="week-bars">
+            ${days.map((day, index) => `
+              <div class="week-col${index === selected ? " is-selected" : ""}${index === TODAY ? " is-today" : ""}">
+                <span class="plan-tick" style="--plan-line:${day.planLine}%"></span>
+                <span class="week-bar-fill" style="--bar-h:${Math.max(day.height, day.eaten > 0 ? 2 : 0)}%"></span>
+              </div>`).join("")}
+          </div>
+        </div>
+        <div class="week-axis" aria-hidden="true">
+          ${DAY_SHORT.map((label, index) => `<span class="${index === selected ? "is-accent" : ""}">${label}</span>`).join("")}
+        </div>
+        <div class="chart-legend" aria-hidden="true">
+          <span><i class="legend-dot"></i>съедено</span>
+          <span><i class="legend-dot legend-dot--plan"></i>план</span>
+        </div>
+      </article>`;
+  }
+  function nutritionTipsCard() {
+    return `
+      <article class="tips-card card">
+        <div class="card-head"><h2 class="card-title">Советы Вадима</h2><span class="card-hint">на неделю</span></div>
+        <div class="tips-list">
+          ${DATA.nutritionTips.map((tip, index) => `<div class="tip"><span class="tip-num">0${index + 1}</span><p>${escapeHtml(tip)}</p></div>`).join("")}
+        </div>
+      </article>`;
+  }
+  function supplementsView() {
+    const taken = supplementsTaken();
+    const total = DATA.supplements.items.length;
+    const course = DATA.supplements;
+    const weekWord = plural(course.courseWeeks, ["неделя", "недели", "недель"]);
+    const leftWeeks = course.courseWeeks - course.currentWeek;
+    return `
+      <div class="screen-head">
+        <span class="eyebrow"><span class="eyebrow-dot"></span>Курс от Вадима</span>
+        <h1 id="supplements-title" tabindex="-1">Добавки</h1>
+        <p class="screen-sub">Простая схема без лишнего. Отмечай приёмы — прогресс и главная страница обновятся сразу.</p>
+      </div>
+      <article class="course-card card">
+        <div class="course-top">
+          <span class="course-icon" aria-hidden="true">${icon("spark")}</span>
+          <div class="course-copy">
+            <span class="eyebrow">Твой курс</span>
+            <h2 class="course-title">Курс: ${course.courseWeeks} ${weekWord}, неделя ${course.currentWeek}</h2>
+            <span class="course-sub">${leftWeeks} ${plural(leftWeeks, ["неделя", "недели", "недель"])} впереди · рекомендации обновляет тренер</span>
+          </div>
+        </div>
+        <div class="course-progress" role="img" aria-label="Неделя ${course.currentWeek} из ${course.courseWeeks}">
+          ${Array.from({ length: course.courseWeeks }, (_, index) => `<span class="${index < course.currentWeek ? "is-done" : ""}"></span>`).join("")}
+        </div>
+        <div class="course-bottom">
+          <div class="today-supp">
+            <span class="eyebrow">Сегодня</span>
+            <strong>${taken} <span>из ${total}</span></strong>
+            <small>добавок принято</small>
+          </div>
+          <span class="supp-dots" aria-hidden="true">${Array.from({ length: total }, (_, index) => `<i class="${index < taken ? "is-done" : ""}"></i>`).join("")}</span>
+        </div>
+      </article>
+      <aside class="info-callout" role="note">${icon("info")}<p>${escapeHtml(DATA.supplements.disclaimer)}</p></aside>
+      <div class="supp-grid">
+        ${course.groups.map((group, groupIndex) => {
+          const items = course.items.map((item, index) => ({ ...item, index })).filter((item) => item.group === groupIndex);
+          const groupTaken = items.filter((item) => STATE.supplements[item.index]).length;
+          return `
+            <section class="supp-group card" aria-labelledby="supp-group-${groupIndex}">
+              <div class="supp-group-head">
+                <span class="supp-group-icon" aria-hidden="true">${icon(group.icon)}</span>
+                <div class="supp-group-title"><h2 id="supp-group-${groupIndex}">${group.name}</h2><span>${groupTaken} из ${items.length} принято</span></div>
+              </div>
+              <div class="supp-items">
+                ${items.map((item) => supplementItem(item)).join("")}
+              </div>
+            </section>`;
+        }).join("")}
+      </div>`;
+  }
+  function supplementItem(item) {
+    const taken = STATE.supplements[item.index];
+    return `
+      <article class="supp-item${taken ? " is-taken" : ""}">
+        <div class="supp-item-head">
+          <div class="supp-name">
+            <h3>${escapeHtml(item.name)}</h3>
+            <p class="supp-dose"><b>${escapeHtml(item.dose)}</b> · ${escapeHtml(item.how)}</p>
+          </div>
+          <button class="supp-toggle" type="button" data-action="toggle-supplement" data-index="${item.index}" data-focus="supp-${item.index}" aria-pressed="${taken}" aria-label="${taken ? "Снять отметку" : "Отметить"} «${escapeHtml(item.name)}»">
+            ${icon(taken ? "check" : "plus")}${taken ? "Принято" : "Принял"}
+          </button>
+        </div>
+        <p class="supp-why"><span>Зачем:</span> ${escapeHtml(item.why)}</p>
+        <p class="supp-note">${icon("info")}<span>${escapeHtml(item.note)}</span></p>
+      </article>`;
+  }
+  const currentByHash = () => {
+    const match = window.location.hash.match(/^#\/(home|workouts|nutrition|supplements)$/);
+    return match ? match[1] : null;
+  };
+  let currentRoute = "home";
+  function renderScreen(route) {
+    const host = document.getElementById(SCREEN_IDS[route]);
+    if (!host) return;
+    host.innerHTML = route === "home" ? homeView()
+      : route === "workouts" ? workoutsView()
+      : route === "nutrition" ? nutritionView()
+      : supplementsView();
+  }
+  function setActiveNav(route) {
+    document.querySelectorAll(".tab, .nav-link").forEach((link) => {
+      if (link.dataset.nav === route) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+  }
+  function syncDock() {
+    const dockOpen = currentRoute === "workouts" && !DATA.schedule[STATE.workoutDay].rest && !STATE.finished[STATE.workoutDay];
+    const host = document.getElementById("workout-dock");
+    document.body.classList.toggle("has-dock", dockOpen);
+    if (!host) return;
+    host.hidden = !dockOpen;
+    host.innerHTML = dockOpen
+      ? `<div class="finish-dock"><button class="btn btn--primary" type="button" data-action="finish-workout">Завершить тренировку ${icon("check")}</button></div>`
+      : "";
+  }
+  function focusRestore(focusKey) {
+    if (!focusKey) return;
+    requestAnimationFrame(() => {
+      const screen = document.getElementById(SCREEN_IDS[currentRoute]);
+      if (!screen) return;
+      const escaped = window.CSS && CSS.escape ? CSS.escape(focusKey) : focusKey.replace(/"/g, '\\"');
+      const target = screen.querySelector(`[data-focus="${escaped}"]`);
+      if (target && !target.disabled) target.focus({ preventScroll: true });
+    });
+  }
+  function activate(route, { focus = true, scroll = true } = {}) {
+    currentRoute = ROUTES.includes(route) ? route : "home";
+    ROUTES.forEach((name) => {
+      const section = document.getElementById(SCREEN_IDS[name]);
+      if (section) section.hidden = name !== currentRoute;
+    });
+    renderScreen(currentRoute);
+    setActiveNav(currentRoute);
+    syncDock();
+    document.title = PAGE_TITLES[currentRoute];
+    if (scroll) window.scrollTo(0, 0);
+    animateRings(document.getElementById(SCREEN_IDS[currentRoute]));
+    if (focus) {
+      requestAnimationFrame(() => {
+        const heading = document.querySelector(`#${SCREEN_IDS[currentRoute]} h1`);
+        if (heading) heading.focus({ preventScroll: true });
+      });
+    }
+  }
+  function refreshActive(focusKey) {
+    renderScreen(currentRoute);
+    if (currentRoute !== "home") renderScreen("home");
+    syncDock();
+    animateRings(document.getElementById(SCREEN_IDS[currentRoute]));
+    focusRestore(focusKey);
+  }
+  function navigate(route) {
+    if (window.location.hash === `#/${route}`) {
+      activate(route, { focus: true });
+    } else {
+      window.location.hash = `#/${route}`;
+    }
+  }
+  function updateThemeMeta() {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const background = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+    if (meta && background) meta.setAttribute("content", background);
+  }
+  function initializeTheme() {
+    STATE.theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+    updateThemeMeta();
+  }
+  function toggleTheme() {
+    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    STATE.theme = next;
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch (error) {}
+    updateThemeMeta();
+  }
+  let toastTimer = null;
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    if (!toast) return;
+    window.clearTimeout(toastTimer);
+    toast.innerHTML = `${icon("check")}<span>${escapeHtml(message)}</span>`;
+    toast.classList.add("is-visible");
+    toastTimer = window.setTimeout(() => toast.classList.remove("is-visible"), 3400);
+  }
+  function handleAction(element) {
+    const action = element.dataset.action;
+    if (!action) return;
+    if (action === "theme") {
+      toggleTheme();
+      return;
+    }
+    if (action === "open-workout") {
+      STATE.workoutDay = Number(element.dataset.day);
+      navigate("workouts");
+      return;
+    }
+    if (action === "select-workout-day") {
+      STATE.workoutDay = Number(element.dataset.day);
+      STATE.openExercise = null;
+      refreshActive(`workout-day-${STATE.workoutDay}`);
+      return;
+    }
+    if (action === "toggle-exercise") {
+      const day = Number(element.dataset.day);
+      const index = Number(element.dataset.index);
+      const key = `${day}-${index}`;
+      STATE.openExercise = STATE.openExercise === key ? null : key;
+      refreshActive(`exercise-toggle-${key}`);
+      return;
+    }
+    if (action === "toggle-exercise-done") {
+      const day = Number(element.dataset.day);
+      const index = Number(element.dataset.index);
+      const key = `${day}-${index}`;
+      if (STATE.finished[day]) return;
+      STATE.exerciseDone[day][index] = !STATE.exerciseDone[day][index];
+      refreshActive(`exercise-check-${key}`);
+      return;
+    }
+    if (action === "finish-workout") {
+      const day = STATE.workoutDay;
+      if (DATA.schedule[day].rest) return;
+      STATE.finished[day] = true;
+      STATE.exerciseDone[day] = DATA.schedule[day].exercises.map(() => true);
+      STATE.openExercise = null;
+      refreshActive();
+      showToast("Отличная работа! Тренировка отмечена");
+      requestAnimationFrame(() => {
+        const heading = document.querySelector("#screen-workouts h1");
+        if (heading) heading.focus({ preventScroll: true });
+      });
+      return;
+    }
+    if (action === "add-water") {
+      const day = Number(element.dataset.day);
+      const index = STATE.water[day].findIndex((filled) => !filled);
+      if (index === -1) return;
+      STATE.water[day][index] = true;
+      refreshActive("water-add");
+      return;
+    }
+    if (action === "toggle-water") {
+      const day = Number(element.dataset.day);
+      const index = Number(element.dataset.index);
+      STATE.water[day][index] = !STATE.water[day][index];
+      refreshActive(`water-${day}-${index}`);
+      return;
+    }
+    if (action === "pick-food-day") {
+      STATE.foodDay = Number(element.dataset.day);
+      refreshActive(`food-day-${STATE.foodDay}`);
+      return;
+    }
+    if (action === "toggle-meal") {
+      const day = Number(element.dataset.day);
+      const index = Number(element.dataset.index);
+      STATE.meals[day][index] = !STATE.meals[day][index];
+      refreshActive(`meal-${day}-${index}`);
+      return;
+    }
+    if (action === "toggle-supplement") {
+      const index = Number(element.dataset.index);
+      STATE.supplements[index] = !STATE.supplements[index];
+      refreshActive(`supp-${index}`);
+    }
+  }
+  document.addEventListener("click", (event) => {
+    const actionElement = event.target.closest("[data-action]");
+    if (actionElement) {
+      handleAction(actionElement);
+      return;
+    }
+    const anchor = event.target.closest('a[href^="#/"]');
+    if (!anchor) return;
+    const route = anchor.getAttribute("href").slice(2);
+    if (!ROUTES.includes(route)) return;
+    if (anchor.dataset.nav === "workouts") {
+      STATE.workoutDay = TODAY;
+      STATE.openExercise = null;
+    }
+    if (anchor.dataset.nav === "nutrition") {
+      STATE.foodDay = TODAY;
+    }
+    if (window.location.hash === anchor.getAttribute("href")) {
+      event.preventDefault();
+      activate(route, { focus: true });
+    }
+  });
+  window.addEventListener("hashchange", () => {
+    const route = currentByHash();
+    if (!route) {
+      try {
+        history.replaceState(null, "", "#/home");
+      } catch (error) {
+        window.location.hash = "#/home";
+      }
+      activate("home", { focus: true });
+      return;
+    }
+    activate(route, { focus: true });
+  });
+  initializeTheme();
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  if (!currentByHash()) {
+    try {
+      history.replaceState(null, "", "#/home");
+    } catch (error) {
+      window.location.hash = "#/home";
+    }
+  }
+  activate(currentByHash() || "home", { focus: false });
+})();
+</script>
+</body>
+</html>
