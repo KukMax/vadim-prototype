@@ -1,0 +1,200 @@
+(function (App) {
+  "use strict";
+
+  const DATA = App.data;
+  const STATE = App.state;
+  const { icon, escapeHtml, one, intFmt, plural, percent, clamp, TODAY, DAY_SHORT, WEEK_DATES, formatLongDate } = App.util;
+
+  function ringMarkup(value, options = {}) {
+    const size = options.size || 52;
+    const stroke = options.stroke || 4.5;
+    const label = options.label || "";
+    const offset = (100 - clamp(value, 0, 100)).toFixed(2);
+    return `
+      <span class="ring" style="--ring-size:${size}px;--ring-stroke:${stroke}px" aria-hidden="true">
+        <svg viewBox="0 0 44 44">
+          <circle class="ring-track" cx="22" cy="22" r="18" pathLength="100"></circle>
+          <circle class="ring-value" cx="22" cy="22" r="18" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" data-ring data-offset="${offset}" transform="rotate(-90 22 22)"></circle>
+        </svg>
+        ${label ? `<span class="ring-center">${label}</span>` : ""}
+      </span>`;
+  }
+  function animateRings(root) {
+    const rings = root.querySelectorAll("[data-ring]");
+    if (!rings.length) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        rings.forEach((ring) => {
+          ring.style.strokeDashoffset = ring.dataset.offset;
+        });
+      });
+    });
+  }
+  function macroRows(macros) {
+    const rows = [
+      { label: "Белки", letter: "Б", value: macros.p, target: DATA.targets.protein, tone: "protein" },
+      { label: "Жиры", letter: "Ж", value: macros.f, target: DATA.targets.fat, tone: "fat" },
+      { label: "Углеводы", letter: "У", value: macros.c, target: DATA.targets.carbs, tone: "carb" },
+    ];
+    return `
+      <div class="macro-list">
+        ${rows.map((row, index) => `
+          <div class="macro-row macro-row--${row.tone}">
+            <div class="macro-label">
+              <span><i class="macro-dot"></i><span class="macro-letter">${row.letter}</span>${row.label}</span>
+              <span><b>${one(row.value)}</b> <span class="macro-target">/ ${one(row.target)} г</span></span>
+            </div>
+            <div class="bar-track" aria-hidden="true">
+              <span class="bar-fill bar-fill--${row.tone}" style="--bar-w:${percent(row.value, row.target)}%"></span>
+            </div>
+          </div>`).join("")}
+      </div>`;
+  }
+  function weekStrip(selected, action) {
+    return `
+      <div class="week-strip" role="group" aria-label="Дни недели">
+        ${DAY_SHORT.map((label, index) => {
+          const day = DATA.schedule[index];
+          const isToday = index === TODAY;
+          const status = day.rest ? "rest" : STATE.finished[index] ? "done" : isToday ? "today" : index < TODAY ? "done" : "planned";
+          const date = WEEK_DATES[index];
+          const selectedClass = selected === index ? " is-selected" : "";
+          const ariaStatus = day.rest ? "отдых" : status === "done" ? "тренировка завершена" : status === "today" ? "тренировка сегодня" : "запланирована";
+          const stateIcon = status === "done" ? icon("check") : status === "rest" ? icon("moon") : `<span class="day-dot ${status === "planned" ? "day-dot--hollow" : ""}"></span>`;
+          return `
+            <button class="day-button is-${status}${isToday ? " is-today" : ""}${selectedClass}" type="button"
+              data-action="${action}" data-day="${index}" data-focus="workout-day-${index}"
+              aria-label="${formatLongDate(date)}${isToday ? ", сегодня" : ""}, ${ariaStatus}">
+              <span class="day-name">${label}</span>
+              <span class="day-date">${date.getDate()}</span>
+              <span class="day-state" aria-hidden="true">${stateIcon}</span>
+            </button>`;
+        }).join("")}
+      </div>`;
+  }
+  function foodDays(selected) {
+    return `
+      <div class="food-days" role="group" aria-label="Выбор дня меню">
+        ${DAY_SHORT.map((label, index) => {
+          const date = WEEK_DATES[index];
+          const isToday = index === TODAY;
+          const pressed = selected === index;
+          return `
+            <button class="food-day${isToday ? " is-today" : ""}" type="button"
+              data-action="pick-food-day" data-day="${index}" data-focus="food-day-${index}"
+              aria-pressed="${pressed}" aria-label="${formatLongDate(date)}${isToday ? ", сегодня" : ""}">
+              <span class="food-day-name">${label}</span>
+              <span class="food-day-date">${date.getDate()}</span>
+            </button>`;
+        }).join("")}
+      </div>`;
+  }
+  function coachNoteCard(text) {
+    return `
+      <aside class="note-card card" aria-label="Заметка от тренера">
+        <div class="note-head">
+          <span class="avatar avatar--sm avatar--coach" aria-hidden="true">В</span>
+          <div class="note-ident"><strong>Вадим</strong><span>твой тренер</span></div>
+        </div>
+        <p class="note-text">${escapeHtml(text)}</p>
+        <p class="note-sign">Заметка к тренировке</p>
+      </aside>`;
+  }
+  function statTile({ href, route, label, iconName, value, spoken, meta, visual = "", quick = "" }) {
+    return `
+      <article class="stat-card card${quick ? " stat-card--water" : ""}">
+        <a class="stat-link" href="${href}" data-nav="${route}" data-focus="${route}-stat" aria-label="${label}: ${spoken}">
+          <span class="stat-top">${icon(iconName)}<span>${label}</span>${icon("chevron-right", "stat-chevron")}</span>
+          <span class="stat-main">
+            <span>
+              <span class="stat-value">${value}</span>
+              <span class="stat-meta">${meta}</span>
+            </span>
+            ${visual ? `<span class="stat-viz" aria-hidden="true">${visual}</span>` : ""}
+          </span>
+        </a>
+        ${quick}
+      </article>`;
+  }
+  function miniBars(filled, total) {
+    return `<span class="stat-mini-bars">${Array.from({ length: total }, (_, index) => `<span class="${index < filled ? "is-filled" : ""}"></span>`).join("")}</span>`;
+  }
+  function miniDots(filled, total) {
+    return `<span class="stat-dots">${Array.from({ length: total }, (_, index) => `<i class="${index < filled ? "is-filled" : ""}"></i>`).join("")}</span>`;
+  }
+
+  const sheetState = { opener: null, onClose: null, closeTimer: 0 };
+
+  function sheetRoot() {
+    return document.getElementById("sheet-layer");
+  }
+
+  function sheetFocusable() {
+    return Array.from(document.querySelectorAll("#sheet button, #sheet a[href], #sheet input, #sheet select, #sheet textarea, #sheet [tabindex]:not([tabindex='-1'])"))
+      .filter((element) => !element.disabled && element.offsetParent !== null);
+  }
+
+  function onSheetKeydown(event) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeSheet();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = sheetFocusable();
+    if (!focusable.length) {
+      event.preventDefault();
+      document.getElementById("sheet").focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function openSheet({ title, bodyHtml, onClose }) {
+    const layer = sheetRoot();
+    if (!layer) return;
+    if (!layer.hidden) closeSheet();
+    sheetState.opener = document.activeElement;
+    sheetState.onClose = onClose || null;
+    document.getElementById("sheet-title").textContent = title;
+    document.getElementById("sheet-body").innerHTML = bodyHtml;
+    layer.hidden = false;
+    document.body.classList.add("is-sheet-open");
+    document.addEventListener("keydown", onSheetKeydown);
+    requestAnimationFrame(() => {
+      layer.classList.add("is-open");
+      const focusable = sheetFocusable();
+      (focusable[0] || document.getElementById("sheet")).focus();
+    });
+  }
+
+  function closeSheet() {
+    const layer = sheetRoot();
+    if (!layer || layer.hidden) return;
+    layer.classList.remove("is-open");
+    document.body.classList.remove("is-sheet-open");
+    document.removeEventListener("keydown", onSheetKeydown);
+    window.clearTimeout(sheetState.closeTimer);
+    sheetState.closeTimer = window.setTimeout(() => {
+      layer.hidden = true;
+      document.getElementById("sheet-body").innerHTML = "";
+    }, 200);
+    if (sheetState.opener && typeof sheetState.opener.focus === "function") {
+      sheetState.opener.focus({ preventScroll: true });
+    }
+    const callback = sheetState.onClose;
+    sheetState.opener = null;
+    sheetState.onClose = null;
+    if (callback) callback();
+  }
+
+  App.ui = { ringMarkup, animateRings, macroRows, weekStrip, foodDays, coachNoteCard, statTile, miniBars, openSheet, closeSheet };
+})(window.App = window.App || {});

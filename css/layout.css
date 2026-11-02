@@ -1,0 +1,34 @@
+/* App shell, topbar, sidebar, bottom navigation. */
+.main{min-height:100dvh;} .page{width:100%;max-width:var(--page-max);margin:0 auto;padding:18px 16px calc(100px + env(safe-area-inset-bottom));} .screen[hidden]{display:none;} .screen{animation:screen-in .23s ease-out both;}
+.topbar{position:sticky;top:0;z-index:40;background:var(--topbar-bg);border-bottom:1px solid var(--border);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);}
+.topbar-inner{display:flex;align-items:center;justify-content:space-between;width:100%;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;}
+.brand{display:inline-flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:44px;gap:4px;border-radius:8px;transition:opacity .16s ease-out;} .brand:active{opacity:.8;}
+.brand-name{color:var(--text);font-size:23px;font-weight:800;line-height:.88;letter-spacing:-.02em;} .brand-sub{color:var(--accent-text);font-size:11px;font-weight:650;line-height:1;letter-spacing:.18em;white-space:nowrap;}
+.brand--side .brand-name{font-size:31px;} .brand--side .brand-sub{font-size:11.5px;} .theme-icon{width:20px;height:20px;} .theme-icon-sun{display:block;} .theme-icon-moon{display:none;} [data-theme="light"] .theme-icon-sun{display:none;}
+[data-theme="light"] .theme-icon-moon{display:block;}
+.sidebar{position:fixed;inset:0 auto 0 0;z-index:35;display:none;width:var(--sidebar-w);padding:28px 20px 22px;flex-direction:column;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);}
+.side-nav{display:flex;flex-direction:column;gap:6px;margin-top:38px;}
+.nav-link{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 12px;border:1px solid transparent;border-radius:var(--radius-sm);color:var(--muted);font-size:14px;font-weight:600;transition:color .2s ease-out,background-color .2s ease-out,border-color .2s ease-out;}
+.nav-link .icon{width:20px;height:20px;} .nav-link[aria-current="page"]{color:var(--accent-text);background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 18%,transparent);}
+.sidebar-bottom{display:flex;flex-direction:column;gap:12px;margin-top:auto;padding-top:24px;}
+.side-theme{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:48px;padding:0 12px;color:var(--muted);background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:600;}
+.side-theme:hover{background:var(--surface-2);} .side-theme:active{opacity:.8;} .side-theme-label{display:inline-flex;align-items:center;gap:9px;} .side-theme-label .icon{width:17px;height:17px;}
+.theme-switch{position:relative;display:inline-block;width:32px;height:18px;flex:none;background:var(--surface-3);border:1px solid var(--border);border-radius:999px;}
+.theme-switch-knob{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--muted);transition:left .2s var(--ease),background-color .2s ease-out;}
+[data-theme="dark"] .theme-switch-knob{left:16px;background:var(--accent);} [data-theme="light"] .theme-switch-knob{left:2px;background:var(--accent-text);}
+.client-card{display:flex;align-items:center;gap:10px;padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);}
+.avatar{display:inline-grid;place-items:center;width:38px;height:38px;flex:none;color:var(--avatar-text);background:var(--avatar-bg);border-radius:50%;font-size:14px;font-weight:800;letter-spacing:-.02em;}
+.avatar--sm{width:28px;height:28px;font-size:11px;} .avatar--coach{color:var(--accent-text);background:var(--accent-soft);border:1px solid var(--accent-line);} .client-copy{display:flex;min-width:0;flex-direction:column;gap:1px;}
+.client-copy strong{color:var(--text);font-size:13.5px;font-weight:700;line-height:1.25;} .client-copy > span{color:var(--muted);font-size:11px;line-height:1.35;}
+.client-copy .client-goal{margin-top:3px;color:var(--accent-text);font-weight:650;}
+.bottom-nav{position:fixed;right:0;bottom:0;left:0;z-index:50;padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:var(--nav-bg);border-top:1px solid var(--border);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);}
+.bottom-inner{display:grid;grid-template-columns:repeat(4,1fr);max-width:560px;margin:0 auto;}
+.tab{display:flex;min-height:52px;padding:5px 2px 3px;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted);border-radius:10px;font-size:10.5px;font-weight:600;line-height:1.2;letter-spacing:.01em;transition:color .2s ease-out,background-color .2s ease-out;}
+.tab .icon{width:22px;height:22px;} .tab[aria-current="page"]{color:var(--accent-text);} .tab[aria-current="page"] .icon{transform:translateY(-1px);} .tab:active,.nav-link:active{opacity:.8;} .tab:hover{color:var(--text);}
+.tab:focus-visible{outline-offset:-2px;} .tab[aria-current="page"]:hover{color:var(--accent-text);} .app-footer{padding:26px 4px 8px;color:var(--muted);font-size:11.5px;line-height:1.5;text-align:center;}
+.screen-head{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:14px;} .screen-head h1{max-width:100%;color:var(--text);font-size:clamp(29px,7.4vw,38px);font-weight:800;line-height:1.04;letter-spacing:-.04em;}
+.home-title{color:var(--muted);font-weight:600;} .home-title .home-name{color:var(--text);font-weight:800;} .screen-sub{max-width:62ch;color:var(--muted);font-size:13.5px;line-height:1.5;}
+.dash-grid{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;gap:12px;} .today-card{position:relative;isolation:isolate;overflow:hidden;padding:18px;border-radius:var(--radius);}
+.today-card::before{position:absolute;inset:0;z-index:-1;background:radial-gradient(32rem 22rem at 94% 7%,var(--accent-soft),transparent 58%),linear-gradient(128deg,var(--sheen),transparent 42%);content:"";pointer-events:none;}
+.today-card--rest::before{background:radial-gradient(30rem 20rem at 96% 12%,var(--rest-tint),transparent 62%),linear-gradient(128deg,var(--sheen-soft),transparent 48%);}
+.today-card--done::before{background:radial-gradient(32rem 22rem at 94% 7%,var(--rest-tint),transparent 58%),linear-gradient(128deg,var(--sheen),transparent 42%);}
