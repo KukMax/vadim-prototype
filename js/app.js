@@ -40,8 +40,14 @@
     const view = App.views[route];
     const screen = document.getElementById(SCREEN_IDS[route]);
     if (!view || !screen) return;
-    currentRoute = route;
     const settings = options || {};
+    const previousRoute = currentRoute;
+    // Only a real route change (first load, hashchange, nav link to another route)
+    // may jump to the top. In-place updates — static: true or a same-route re-render
+    // from handleAction — keep the current scroll position.
+    const routeChanged = previousRoute !== route;
+    const savedScrollY = window.scrollY || window.pageYOffset || 0;
+    currentRoute = route;
     const html = view.view();
     screen.classList.toggle("is-static", !!settings.static);
     screen.innerHTML = html;
@@ -61,7 +67,12 @@
     syncNavigation(route);
     syncClientMeta();
     syncDock();
-    window.scrollTo(0, 0);
+    if (routeChanged) {
+      window.scrollTo(0, 0);
+    } else {
+      window.scrollTo(0, savedScrollY);
+      window.requestAnimationFrame(() => window.scrollTo(0, savedScrollY));
+    }
     if (settings.focus === "heading") {
       const heading = screen.querySelector("h1");
       if (heading) heading.focus({ preventScroll: true });
@@ -551,6 +562,9 @@
   /* ---------- events ---------- */
 
   document.addEventListener("click", (event) => {
+    const navLink = event.target.closest("[data-nav]");
+    // Re-clicking the nav link of the current route is an explicit "back to top".
+    if (navLink && navLink.dataset.nav === currentRoute) window.scrollTo(0, 0);
     const trigger = event.target.closest("[data-action]");
     if (!trigger) return;
     handleAction(trigger.dataset.action, trigger, event);

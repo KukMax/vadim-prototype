@@ -172,7 +172,7 @@
     requestAnimationFrame(() => {
       layer.classList.add("is-open");
       const focusable = sheetFocusable();
-      (focusable[0] || document.getElementById("sheet")).focus();
+      (focusable[0] || document.getElementById("sheet")).focus({ preventScroll: true });
     });
   }
 
