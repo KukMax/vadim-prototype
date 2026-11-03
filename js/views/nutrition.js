@@ -4,12 +4,12 @@
   const DATA = App.data;
   const STATE = App.state;
   const {
-    NOW, TODAY, NOW_MINUTES, DAY_SHORT, WEEK_DATES, SESSION_COUNT, intFmt, oneFmt,
+    NOW, TODAY, NOW_MINUTES, DAY_SHORT, WEEK_DATES, intFmt, oneFmt,
     weightFmt, addDays, icon, escapeHtml, plural, one, num, weight, formatLongDate,
-    greetingForHour, getNextMeal, getNextWorkout, sumDishes, menuTotals, planTotals,
-    eatenTotals, eatenMealCount, waterCount, workoutsDone, percent, clamp,
+    greetingForHour, getNextMeal, sumDishes, menuTotals, planTotals,
+    eatenTotals, eatenMealCount, waterCount, percent, clamp,
   } = App.util;
-  const { ringMarkup, macroRows, weekStrip, foodDays, coachNoteCard, statTile, miniBars } = App.ui;
+  const { ringMarkup, macroRows, foodDays, coachNoteCard, statTile, miniBars } = App.ui;
   App.views = App.views || {};
 
   function nutritionView() {

@@ -5,14 +5,19 @@
   const DATA = App.data;
   const STATE = App.state;
   const MEASUREMENTS = App.measurements;
+  const CYCLE = App.cycle;
+  const PROFILE = App.profile;
   const { ROUTES, SCREEN_IDS, PAGE_TITLES } = App.const;
-  const { TODAY, isoDate, escapeHtml, icon, one, weight, plural, formatShortDate } = App.util;
+  const { NOW, TODAY, isoDate, escapeHtml, icon, one, weight, plural, percent, formatShortDate } = App.util;
   const { openSheet, closeSheet } = App.ui;
 
   let currentRoute = null;
   let routeFocus = null;
   let toastTimer = 0;
   let installPrompt = null;
+  let pendingWorkoutSelection = 0;
+
+  const TRAININGS = DATA.subscription.training.sessions;
 
   /* ---------- routing ---------- */
 
@@ -36,6 +41,18 @@
     return route;
   }
 
+  function screenErrorMarkup(route) {
+    return `
+      <div class="screen-head">
+        <span class="eyebrow"><span class="eyebrow-dot"></span>Trenio</span>
+        <h1 class="page-title" id="${route}-title" tabindex="-1">Экран недоступен</h1>
+      </div>
+      <article class="card">
+        <p class="page-lead">Не удалось показать экран. Обновите страницу.</p>
+        <a class="btn btn--ghost" href="#/home" data-nav="home">Вернуться на главную</a>
+      </article>`;
+  }
+
   function render(route, options) {
     const view = App.views[route];
     const screen = document.getElementById(SCREEN_IDS[route]);
@@ -46,9 +63,16 @@
     // may jump to the top. In-place updates — static: true or a same-route re-render
     // from handleAction — keep the current scroll position.
     const routeChanged = previousRoute !== route;
+    const jumpTop = routeChanged || !!settings.scrollTop;
     const savedScrollY = window.scrollY || window.pageYOffset || 0;
     currentRoute = route;
-    const html = view.view();
+    let html;
+    try {
+      html = view.view();
+    } catch (error) {
+      console.error(error);
+      html = screenErrorMarkup(route);
+    }
     screen.classList.toggle("is-static", !!settings.static);
     screen.innerHTML = html;
     document.querySelectorAll(".screen").forEach((item) => {
@@ -66,8 +90,9 @@
     document.body.dataset.route = route;
     syncNavigation(route);
     syncClientMeta();
+    syncProfileChrome();
     syncDock();
-    if (routeChanged) {
+    if (jumpTop) {
       window.scrollTo(0, 0);
     } else {
       window.scrollTo(0, savedScrollY);
@@ -84,12 +109,24 @@
     }
   }
 
+  function prepareWorkouts() {
+    const cycleData = CYCLE.current();
+    STATE.cycle.tab = "current";
+    STATE.cycle.archiveOpen = null;
+    const next = CYCLE.nextSession(cycleData);
+    const fallback = cycleData.sessions[cycleData.sessions.length - 1];
+    const target = pendingWorkoutSelection || (next ? next.number : fallback.number);
+    STATE.cycle.selected = target;
+    pendingWorkoutSelection = 0;
+  }
+
   function onRouteChange() {
     const route = resolveRoute();
     const focus = routeFocus || "heading";
     routeFocus = null;
     const layer = document.getElementById("sheet-layer");
     if (layer && !layer.hidden) closeSheet();
+    if (route === "workouts") prepareWorkouts();
     render(route, focus === "heading" ? { focus } : { focusSelector: focus });
   }
 
@@ -98,7 +135,12 @@
     if (currentRoute === route && resolveRoute() === route) {
       const pending = routeFocus;
       routeFocus = null;
-      render(route, pending === "heading" ? { focus: pending } : { focusSelector: pending });
+      const options = pending === "heading" ? { focus: pending } : { focusSelector: pending };
+      if (route === "workouts") {
+        prepareWorkouts();
+        options.scrollTop = true;
+      }
+      render(route, options);
       return;
     }
     if (location.hash === "#/" + route) onRouteChange();
@@ -120,6 +162,20 @@
     const latest = MEASUREMENTS.latest();
     const current = latest ? latest.values.weight : DATA.goal.current;
     target.textContent = `${DATA.client.age} года · ${DATA.client.height} см · ${weight(current)} кг`;
+  }
+
+  function syncProfileChrome() {
+    const src = STATE.profile.avatar;
+    const top = document.getElementById("topbar-avatar");
+    if (top) {
+      if (src) top.innerHTML = `<img class="avatar-img" src="${escapeHtml(src)}" alt="">`;
+      else top.textContent = "А";
+    }
+    const side = document.getElementById("sidebar-avatar");
+    if (side) {
+      if (src) side.innerHTML = `<img class="avatar-img" src="${escapeHtml(src)}" alt="">`;
+      else side.textContent = "А";
+    }
   }
 
   function focusKey(key) {
@@ -155,34 +211,66 @@
   function syncDock() {
     const dock = document.getElementById("workout-dock");
     if (!dock) return;
-    const day = DATA.schedule[STATE.workoutDay];
-    const visible = currentRoute === "workouts" && !!day && !day.rest && !STATE.finished[STATE.workoutDay];
+    const cycleData = CYCLE.current();
+    const session = CYCLE.findSession(cycleData, STATE.cycle.selected);
+    const visible = currentRoute === "workouts"
+      && STATE.cycle.tab === "current"
+      && STATE.training.status === "active"
+      && Boolean(session)
+      && !CYCLE.isDone(cycleData, session.number);
     document.body.classList.toggle("has-dock", visible);
     dock.hidden = !visible;
     if (!visible) {
       dock.innerHTML = "";
       return;
     }
-    const done = STATE.exerciseDone[STATE.workoutDay];
-    const total = day.exercises.length;
-    const doneCount = done.filter(Boolean).length;
-    const allDone = doneCount >= total;
+    const total = CYCLE.itemCount(session);
+    const marked = CYCLE.itemDoneCount(cycleData, session);
     dock.innerHTML = `
       <div class="finish-dock">
-        <button class="btn btn--primary" type="button" data-action="finish-workout" ${allDone ? "" : "disabled"} aria-label="Завершить тренировку. Отмечено ${doneCount} из ${total} ${plural(total, ["упражнение", "упражнения", "упражнений"])}">
+        <button class="btn btn--primary" type="button" data-action="finish-workout" aria-label="Завершить тренировку ${session.number} из ${TRAININGS}. Отмечено ${marked} из ${total} ${plural(total, ["упражнение", "упражнения", "упражнений"])}">
           ${icon("check")}Завершить тренировку
         </button>
       </div>`;
   }
 
   function finishWorkout() {
-    const day = DATA.schedule[STATE.workoutDay];
-    if (!day || day.rest) return;
-    const done = STATE.exerciseDone[STATE.workoutDay];
-    if (!done.every(Boolean)) return;
-    STATE.finished[STATE.workoutDay] = true;
+    const cycleData = CYCLE.current();
+    const session = CYCLE.findSession(cycleData, STATE.cycle.selected);
+    if (STATE.training.status !== "active" || !session) return;
+    if (CYCLE.isDone(cycleData, session.number)) return;
+    STATE.cycle.done[session.number] = isoDate(NOW);
+    session.blocks.forEach((block) => {
+      block.items.forEach((item) => {
+        STATE.cycle.itemDone[item.id] = true;
+      });
+    });
+    const last = session.number >= TRAININGS;
+    if (last) STATE.training.status = "completed";
+    const next = CYCLE.nextSession(cycleData);
+    STATE.cycle.selected = next ? next.number : session.number;
+    if (last) {
+      render("workouts", { focusKey: "cycle-tab-archive" });
+      toast("Цикл завершён!");
+      return;
+    }
     render("workouts", { focus: "heading" });
-    toast("Тренировка завершена");
+    window.scrollTo(0, 0);
+    toast(`Отличная работа! Тренировка ${session.number} из ${TRAININGS} выполнена`);
+  }
+
+  function undoSession() {
+    const cycleData = CYCLE.current();
+    const session = CYCLE.findSession(cycleData, STATE.cycle.selected);
+    if (!session) return;
+    delete STATE.cycle.done[session.number];
+    session.blocks.forEach((block) => {
+      block.items.forEach((item) => {
+        delete STATE.cycle.itemDone[item.id];
+      });
+    });
+    if (STATE.training.status === "completed") STATE.training.status = "active";
+    render("workouts", { focusKey: "session-" + session.number });
   }
 
   /* ---------- measurement form ---------- */
@@ -290,6 +378,90 @@
             </a>
           </div>
           <button class="btn btn--ghost contact-sheet-cancel" type="button" data-action="close-sheet">Отмена</button>
+        </div>`,
+    });
+  }
+
+  function editContactsSheet() {
+    openSheet({
+      title: "Контакты",
+      bodyHtml: `
+        <form class="contact-form" data-form="contacts" novalidate>
+          <p class="sheet-lead">Эти контакты видит Вадим. Они не отображаются другим клиентам.</p>
+          <div class="measure-field" data-field="phone">
+            <label for="contact-phone">Телефон</label>
+            <input class="input" id="contact-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" value="${escapeHtml(STATE.profile.phone)}">
+            <p class="field-error" hidden></p>
+          </div>
+          <div class="measure-field" data-field="email">
+            <label for="contact-email">Почта</label>
+            <input class="input" id="contact-email" name="email" type="email" inputmode="email" autocomplete="email" value="${escapeHtml(STATE.profile.email)}">
+            <p class="field-error" hidden></p>
+          </div>
+          <div class="sheet-actions">
+            <button class="btn btn--primary" type="submit">Сохранить</button>
+            <button class="btn btn--ghost" type="button" data-action="close-sheet">Отмена</button>
+          </div>
+        </form>`,
+    });
+  }
+
+  function normalizePhone(raw) {
+    const digits = String(raw || "").replace(/\D/g, "");
+    if (digits.length === 11 && (digits.charAt(0) === "7" || digits.charAt(0) === "8")) {
+      const rest = "7" + digits.slice(1);
+      return `+7 ${rest.slice(1, 4)} ${rest.slice(4, 7)}-${rest.slice(7, 9)}-${rest.slice(9, 11)}`;
+    }
+    return String(raw || "").trim();
+  }
+
+  function saveContacts(form) {
+    const phoneField = { key: "phone" };
+    const emailField = { key: "email" };
+    const phoneInput = form.elements.phone;
+    const emailInput = form.elements.email;
+    const phoneRaw = String((phoneInput && phoneInput.value) || "").trim();
+    const emailRaw = String((emailInput && emailInput.value) || "").trim();
+    const digits = phoneRaw.replace(/\D/g, "");
+    let firstInvalid = null;
+    if (digits.length < 10 || digits.length > 15) {
+      fieldError(phoneField, "Введите телефон: 10–15 цифр.");
+      firstInvalid = phoneInput;
+    } else {
+      fieldError(phoneField, "");
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailRaw)) {
+      fieldError(emailField, "Введите почту, например name@mail.ru.");
+      if (!firstInvalid) firstInvalid = emailInput;
+    } else {
+      fieldError(emailField, "");
+    }
+    if (firstInvalid) {
+      firstInvalid.focus({ preventScroll: true });
+      return;
+    }
+    STATE.profile.phone = normalizePhone(phoneRaw);
+    STATE.profile.email = emailRaw;
+    PROFILE.save();
+    closeSheet();
+    if (currentRoute === "profile") render("profile", { static: true, focusKey: "edit-contacts" });
+    toast("Контакты сохранены");
+  }
+
+  function legendSheet() {
+    openSheet({
+      title: "Обозначения в таблице",
+      bodyHtml: `
+        <div class="contact-sheet">
+          <p class="sheet-lead">Как читать таблицу упражнений.</p>
+          <dl class="legend-list">
+            ${DATA.tableLegend.map((row) => `
+              <div class="legend-row">
+                <dt>${escapeHtml(row.term)}</dt>
+                <dd>${escapeHtml(row.text)}</dd>
+              </div>`).join("")}
+          </dl>
+          <button class="btn btn--ghost contact-sheet-cancel" type="button" data-action="close-sheet">Понятно</button>
         </div>`,
     });
   }
@@ -408,12 +580,60 @@
     }
     const reader = new FileReader();
     reader.onload = () => {
-      STATE.avatar = String(reader.result || "");
-      render("profile", { focusSelector: '[data-action="pick-avatar"]' });
-      toast("Фото обновлено");
+      const image = new Image();
+      image.onload = () => {
+        const size = 256;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const context = canvas.getContext("2d");
+        if (!context) {
+          toast("Не удалось обработать фото");
+          return;
+        }
+        const side = Math.min(image.width, image.height);
+        if (!side) {
+          toast("Не удалось обработать фото");
+          return;
+        }
+        context.drawImage(
+          image,
+          (image.width - side) / 2,
+          (image.height - side) / 2,
+          side,
+          side,
+          0,
+          0,
+          size,
+          size
+        );
+        try {
+          STATE.profile.avatar = canvas.toDataURL("image/jpeg", 0.85);
+        } catch (error) {
+          toast("Не удалось обработать фото");
+          return;
+        }
+        PROFILE.save();
+        syncProfileChrome();
+        if (currentRoute === "profile") {
+          render("profile", { static: true, focusSelector: '[data-action="pick-avatar"]' });
+        }
+        toast("Фото обновлено");
+      };
+      image.onerror = () => toast("Не удалось открыть изображение");
+      image.src = String(reader.result || "");
     };
     reader.onerror = () => toast("Не удалось прочитать файл");
     reader.readAsDataURL(file);
+  }
+
+  function removeAvatar() {
+    if (!STATE.profile.avatar) return;
+    STATE.profile.avatar = "";
+    PROFILE.save();
+    syncProfileChrome();
+    if (currentRoute === "profile") render("profile", { static: true, focusSelector: '[data-action="pick-avatar"]' });
+    toast("Фото удалено");
   }
 
   /* ---------- actions ---------- */
@@ -454,44 +674,106 @@
         render("nutrition", { static: true, focusKey: trigger.dataset.focus });
         break;
       }
-      case "toggle-exercise": {
-        const key = `${trigger.dataset.day}-${trigger.dataset.index}`;
-        STATE.openExercise = STATE.openExercise === key ? null : key;
-        render("workouts", { static: true, focusKey: trigger.dataset.focus });
-        break;
-      }
-      case "toggle-exercise-done": {
-        const day = Number(trigger.dataset.day);
-        const index = Number(trigger.dataset.index);
-        if (!STATE.exerciseDone[day] || STATE.finished[day]) return;
-        STATE.exerciseDone[day][index] = !STATE.exerciseDone[day][index];
-        render("workouts", { static: true, focusKey: trigger.dataset.focus });
+      case "toggle-item": {
+        const cycleData = CYCLE.current();
+        if (!CYCLE.isCurrent(cycleData)) return;
+        const session = CYCLE.findSession(cycleData, Number(trigger.dataset.session));
+        const itemId = trigger.dataset.item;
+        if (!session || !itemId) return;
+        const known = session.blocks.some((block) => block.items.some((item) => item.id === itemId));
+        if (!known) return;
+        const nowDone = !CYCLE.isItemDone(cycleData, itemId);
+        if (nowDone) STATE.cycle.itemDone[itemId] = true;
+        else delete STATE.cycle.itemDone[itemId];
+        trigger.classList.toggle("is-done", nowDone);
+        trigger.setAttribute("aria-pressed", String(nowDone));
+        const row = trigger.closest(".ex-row, .simple-row");
+        if (row) row.classList.toggle("is-done", nowDone);
+        const total = CYCLE.itemCount(session);
+        const marked = CYCLE.itemDoneCount(cycleData, session);
+        const fill = document.getElementById("session-progress-fill");
+        const label = document.getElementById("session-progress-text");
+        const track = fill ? fill.closest(".progress-track") : null;
+        if (fill) fill.style.setProperty("--progress", Math.round(percent(marked, total)) + "%");
+        if (label) label.textContent = marked + " из " + total;
+        if (track) {
+          track.setAttribute("aria-valuenow", String(marked));
+          track.setAttribute("aria-valuetext", marked + " из " + total);
+        }
         break;
       }
       case "finish-workout":
         finishWorkout();
         break;
-      case "select-workout-day": {
-        const day = Number(trigger.dataset.day);
-        if (!DATA.schedule[day]) return;
-        STATE.workoutDay = day;
-        STATE.openExercise = null;
-        render("workouts", { focusKey: trigger.dataset.focus });
+      case "undo-session":
+        undoSession();
+        break;
+      case "open-session": {
+        const number = Number(trigger.dataset.session);
+        if (!number) return;
+        STATE.cycle.tab = "current";
+        STATE.cycle.archiveOpen = null;
+        if (currentRoute === "workouts") {
+          STATE.cycle.selected = number;
+          render("workouts", { focusKey: "session-" + number });
+        } else {
+          pendingWorkoutSelection = number;
+          go("workouts", '[data-focus="session-' + number + '"]');
+        }
         break;
       }
+      case "cycle-tab": {
+        const tab = trigger.dataset.tab === "archive" ? "archive" : "current";
+        if (STATE.cycle.tab === tab && !STATE.cycle.archiveOpen) return;
+        STATE.cycle.tab = tab;
+        STATE.cycle.archiveOpen = null;
+        render("workouts", { focusKey: "cycle-tab-" + tab });
+        break;
+      }
+      case "open-archive-cycle": {
+        const id = trigger.dataset.cycle;
+        if (!id || !CYCLE.byId(id)) return;
+        STATE.cycle.archiveOpen = id;
+        render("workouts", { focusKey: "back-to-archive" });
+        break;
+      }
+      case "close-archive-cycle":
+        STATE.cycle.archiveOpen = null;
+        render("workouts", { focusKey: "cycle-tab-archive" });
+        break;
+      case "open-legend":
+        legendSheet();
+        break;
+      case "toggle-rec": {
+        const card = trigger.closest(".rec-card");
+        if (!card) return;
+        const open = !card.classList.contains("is-open");
+        card.classList.toggle("is-open", open);
+        trigger.setAttribute("aria-expanded", String(open));
+        break;
+      }
+      case "set-training-status": {
+        const next = trigger.dataset.status;
+        if (["active", "completed", "none"].indexOf(next) === -1) return;
+        STATE.training.status = next;
+        if (currentRoute === "workouts") render("workouts", { static: true });
+        else if (currentRoute === "home") render("home", { static: true });
+        else if (currentRoute === "profile") render("profile", { static: true });
+        break;
+      }
+      case "reset-demo":
+        try {
+          window.localStorage.removeItem("trenio-profile");
+        } catch (error) {
+          /* хранилище недоступно — перезагрузка всё равно сбросит сессию */
+        }
+        location.reload();
+        break;
       case "pick-food-day": {
         const day = Number(trigger.dataset.day);
         if (!DATA.menus[day]) return;
         STATE.foodDay = day;
         render("nutrition", { static: true, focusKey: trigger.dataset.focus });
-        break;
-      }
-      case "open-workout": {
-        const day = Number(trigger.dataset.day);
-        if (!DATA.schedule[day]) return;
-        STATE.workoutDay = day;
-        STATE.openExercise = null;
-        go("workouts");
         break;
       }
       case "open-measure-form":
@@ -545,6 +827,12 @@
       case "pick-avatar":
         pickAvatar();
         break;
+      case "remove-avatar":
+        removeAvatar();
+        break;
+      case "edit-contacts":
+        editContactsSheet();
+        break;
       case "share-app":
         shareApp();
         break;
@@ -584,7 +872,12 @@
 
   document.addEventListener("input", (event) => {
     const target = event.target;
-    if (!(target instanceof HTMLInputElement) || !target.closest("#measure-form")) return;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (target.closest('[data-form="contacts"]')) {
+      if (target.name === "phone" || target.name === "email") fieldError({ key: target.name }, "");
+      return;
+    }
+    if (!target.closest("#measure-form")) return;
     updateDelta(target);
     const field = DATA.measurementFields.find((item) => item.key === target.name);
     if (field) fieldError(field, "");
@@ -592,7 +885,13 @@
 
   document.addEventListener("submit", (event) => {
     const form = event.target;
-    if (!(form instanceof HTMLFormElement) || form.dataset.form !== "measure") return;
+    if (!(form instanceof HTMLFormElement)) return;
+    if (form.dataset.form === "contacts") {
+      event.preventDefault();
+      saveContacts(form);
+      return;
+    }
+    if (form.dataset.form !== "measure") return;
     event.preventDefault();
     saveMeasurements();
   });

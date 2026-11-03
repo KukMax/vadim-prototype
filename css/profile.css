@@ -1,0 +1,46 @@
+/* Profile: avatar photo, contacts form, subscription rows, demo panel. */
+
+/* ---------- avatar photo ---------- */
+.avatar-img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.avatar--button,.avatar--xl{overflow:hidden;}
+.photo-actions{display:flex;flex-wrap:wrap;gap:8px;width:100%;}
+.photo-actions .btn{flex:1 1 140px;min-height:44px;}
+.identity-photo--remove{color:var(--muted);}
+
+/* ---------- contacts ---------- */
+.contact-value{color:var(--text);overflow-wrap:anywhere;}
+.contact-form{display:flex;flex-direction:column;gap:12px;}
+.contact-form label{display:block;margin-bottom:5px;color:var(--text);font-size:12px;font-weight:650;line-height:1.3;}
+.input{width:100%;min-width:0;height:46px;padding:0 12px;color:var(--text);font:inherit;font-size:15px;font-weight:650;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;outline:none;transition:border-color .2s ease-out,background-color .2s ease-out;}
+.input:focus{border-color:var(--accent-line);background:var(--surface);box-shadow:0 0 0 3px var(--accent-soft);}
+.contact-form .measure-field.is-invalid .input{border-color:#FF8A65;background:rgba(255,107,0,.06);box-shadow:none;}
+:root[data-theme="light"] .contact-form .measure-field.is-invalid .input{border-color:#C0392B;background:rgba(192,57,43,.05);}
+.sheet-actions{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
+.sheet-actions .btn{width:100%;}
+
+/* ---------- subscription ---------- */
+.subscription-rows{display:flex;flex-direction:column;margin-top:10px;}
+.subscription-row{padding:12px 0;border-top:1px solid var(--border);}
+.subscription-row:first-child{border-top:0;padding-top:2px;}
+.subscription-row:last-child{padding-bottom:2px;}
+.subscription-row-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.subscription-name{min-width:0;color:var(--text);font-size:14px;font-weight:700;line-height:1.3;letter-spacing:-.01em;}
+.subscription-detail{margin-top:5px;color:var(--muted);font-size:11.5px;line-height:1.45;}
+.subscription-row .progress-track{margin-top:9px;}
+
+/* ---------- demo panel ---------- */
+.demo-card{margin-top:12px;padding:15px 16px;background:var(--surface-2);border:1px dashed var(--border-strong);border-radius:var(--radius);}
+.demo-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.demo-title{color:var(--muted);font-size:11px;font-weight:700;line-height:1.3;letter-spacing:.07em;text-transform:uppercase;}
+.demo-note{margin-top:5px;color:var(--muted-2);font-size:11.5px;line-height:1.5;}
+.demo-setting{margin-top:12px;}
+.demo-label{display:block;margin-bottom:6px;color:var(--muted);font-size:11.5px;font-weight:600;}
+.demo-reset{width:100%;margin-top:12px;color:var(--muted);font-size:12.5px;}
+
+/* ---------- three-way segmented control ---------- */
+.segmented--wrap{grid-template-columns:repeat(3,minmax(0,1fr));}
+.segmented--wrap .segment span{min-height:44px;padding:4px 6px;text-align:center;white-space:normal;line-height:1.2;}
+
+@media (prefers-reduced-motion:reduce) {
+  .input{transition:none;}
+}

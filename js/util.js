@@ -15,22 +15,33 @@
   const WEEK_START = addDays(NOW, -TODAY);
   const WEEK_DATES = App.const.DAY_SHORT.map((_, index) => addDays(WEEK_START, index));
   const pad2 = (value) => String(value).padStart(2, "0");
-  const isoDate = (date) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+  const isValidDate = (date) => date instanceof Date && !Number.isNaN(date.getTime());
+  const isoDate = (date) => (isValidDate(date) ? `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}` : "");
   const parseIsoDate = (value) => {
-    const parts = String(value).split("-").map(Number);
+    if (value instanceof Date) return isValidDate(value) ? value : new Date(NaN);
+    const parts = String(value == null ? "" : value).split("-").map(Number);
+    if (parts.length < 3 || parts.some((part) => !Number.isFinite(part))) return new Date(NaN);
     return new Date(parts[0], parts[1] - 1, parts[2]);
   };
   const daysBetween = (fromIso, toIso) => {
     const from = typeof fromIso === "string" ? parseIsoDate(fromIso) : fromIso;
     const to = typeof toIso === "string" ? parseIsoDate(toIso) : toIso;
+    if (!isValidDate(from) || !isValidDate(to)) return 0;
     return Math.round((new Date(to.getFullYear(), to.getMonth(), to.getDate()) - new Date(from.getFullYear(), from.getMonth(), from.getDate())) / 86400000);
   };
   const shortDateFmt = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" });
-  const formatShortDate = (value) => shortDateFmt.format(parseIsoDate(value)).replace(".", "");
-  const formatShortDateNoYear = (value) => shortDateFmt.format(parseIsoDate(value));
-
-
-  const SESSION_COUNT = DATA.schedule.filter((day) => !day.rest).length;
+  const formatShortDate = (value) => {
+    const date = parseIsoDate(value);
+    return isValidDate(date) ? shortDateFmt.format(date).replace(".", "") : "—";
+  };
+  const formatShortDateNoYear = (value) => {
+    const date = parseIsoDate(value);
+    return isValidDate(date) ? shortDateFmt.format(date) : "—";
+  };
+  const formatDateRange = (fromIso, toIso) => {
+    if (!fromIso || !toIso) return "";
+    return formatShortDate(fromIso) + " – " + formatShortDate(toIso);
+  };
 
   function toMinutes(value) {
     const parts = value.split(":");
@@ -76,7 +87,7 @@
     }[char]));
   }
   function formatLongDate(date) {
-    return capitalize(longDateFmt.format(date));
+    return isValidDate(date) ? capitalize(longDateFmt.format(date)) : "—";
   }
   function greetingForHour(hour) {
     if (hour >= 5 && hour < 12) return "Доброе утро";
@@ -91,21 +102,6 @@
       }
     }
     return { day: (TODAY + 1) % 7, index: 0, label: "завтра" };
-  }
-  function getNextWorkout(fromDay = TODAY) {
-    for (let offset = 1; offset <= 7; offset += 1) {
-      const index = (fromDay + offset) % 7;
-      if (!DATA.schedule[index].rest) {
-        return {
-          index,
-          offset,
-          date: addDays(WEEK_DATES[fromDay], offset),
-          inWeek: fromDay + offset < 7,
-          session: DATA.schedule[index],
-        };
-      }
-    }
-    return null;
   }
   function sumDishes(dishes) {
     const totals = dishes.reduce((total, dish) => ({
@@ -148,12 +144,9 @@
   function waterCount(dayIndex) {
     return App.state.water[dayIndex].filter(Boolean).length;
   }
-  function workoutsDone() {
-    return App.state.finished.filter(Boolean).length;
-  }
   App.util = { THEME_KEY, NOW, TODAY, NOW_MINUTES, intFmt, oneFmt, weightFmt, longDateFmt,
-    addDays, isoDate, parseIsoDate, daysBetween, formatShortDate, formatShortDateNoYear, DAY_SHORT, WEEK_START, WEEK_DATES, SESSION_COUNT, toMinutes, capitalize, plural, clamp,
+    addDays, isoDate, parseIsoDate, daysBetween, formatShortDate, formatShortDateNoYear, formatDateRange, DAY_SHORT, WEEK_START, WEEK_DATES, toMinutes, capitalize, plural, clamp,
     percent, num, one, weight, icon, escapeHtml, formatLongDate, greetingForHour,
-    getNextMeal, getNextWorkout, sumDishes, menuTotals, planTotals, eatenTotals,
-    eatenMealCount, waterCount, workoutsDone };
+    getNextMeal, sumDishes, menuTotals, planTotals, eatenTotals,
+    eatenMealCount, waterCount };
 })(window.App = window.App || {});

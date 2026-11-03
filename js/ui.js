@@ -2,8 +2,7 @@
   "use strict";
 
   const DATA = App.data;
-  const STATE = App.state;
-  const { icon, escapeHtml, one, intFmt, plural, percent, clamp, TODAY, DAY_SHORT, WEEK_DATES, formatLongDate } = App.util;
+  const { icon, escapeHtml, one, intFmt, percent, clamp, TODAY, DAY_SHORT, WEEK_DATES, formatLongDate } = App.util;
 
   function ringMarkup(value, options = {}) {
     const size = options.size || 52;
@@ -50,24 +49,43 @@
           </div>`).join("")}
       </div>`;
   }
-  function weekStrip(selected, action) {
+  function sessionLabel(cycleData, number) {
+    const current = App.cycle;
+    if (current.isDone(cycleData, number)) return "выполнена";
+    if (current.nextNumber(cycleData) === number) return "следующая";
+    return "впереди";
+  }
+  function cycleStrip(cycleData, selected) {
+    const current = App.cycle;
+    const next = current.nextNumber(cycleData);
     return `
-      <div class="week-strip" role="group" aria-label="Дни недели">
-        ${DAY_SHORT.map((label, index) => {
-          const day = DATA.schedule[index];
-          const isToday = index === TODAY;
-          const status = day.rest ? "rest" : STATE.finished[index] ? "done" : isToday ? "today" : index < TODAY ? "done" : "planned";
-          const date = WEEK_DATES[index];
-          const selectedClass = selected === index ? " is-selected" : "";
-          const ariaStatus = day.rest ? "отдых" : status === "done" ? "тренировка завершена" : status === "today" ? "тренировка сегодня" : "запланирована";
-          const stateIcon = status === "done" ? icon("check") : status === "rest" ? icon("moon") : `<span class="day-dot ${status === "planned" ? "day-dot--hollow" : ""}"></span>`;
+      <div class="session-strip" role="group" aria-label="Тренировки цикла">
+        ${current.sessions(cycleData).map((session) => {
+          const done = current.isDone(cycleData, session.number);
+          const classes = `session-button${done ? " is-done" : ""}${session.number === next ? " is-next" : ""}${session.number === selected ? " is-selected" : ""}`;
           return `
-            <button class="day-button is-${status}${isToday ? " is-today" : ""}${selectedClass}" type="button"
-              data-action="${action}" data-day="${index}" data-focus="workout-day-${index}"
-              aria-label="${formatLongDate(date)}${isToday ? ", сегодня" : ""}, ${ariaStatus}">
-              <span class="day-name">${label}</span>
-              <span class="day-date">${date.getDate()}</span>
-              <span class="day-state" aria-hidden="true">${stateIcon}</span>
+            <button class="${classes}" type="button"
+              data-action="open-session" data-session="${session.number}" data-focus="session-${session.number}"
+              aria-pressed="${session.number === selected}"
+              aria-label="Тренировка ${session.number}, ${sessionLabel(cycleData, session.number)}">
+              <span class="session-num">${session.number}</span>
+              ${done ? `<span class="session-mark" aria-hidden="true">${icon("check")}</span>` : `<span class="session-mark session-mark--dot" aria-hidden="true"></span>`}
+            </button>`;
+        }).join("")}
+      </div>`;
+  }
+  function cycleMini(cycleData) {
+    const current = App.cycle;
+    const next = current.nextNumber(cycleData);
+    return `
+      <div class="cycle-mini" role="group" aria-label="Тренировки цикла">
+        ${current.sessions(cycleData).map((session) => {
+          const done = current.isDone(cycleData, session.number);
+          return `
+            <button class="cycle-mini-item${done ? " is-done" : ""}${session.number === next ? " is-next" : ""}" type="button"
+              data-action="open-session" data-session="${session.number}" data-focus="cycle-mini-${session.number}"
+              aria-label="Тренировка ${session.number}, ${sessionLabel(cycleData, session.number)}">
+              <span aria-hidden="true">${session.number}</span>
             </button>`;
         }).join("")}
       </div>`;
@@ -196,5 +214,5 @@
     if (callback) callback();
   }
 
-  App.ui = { ringMarkup, animateRings, macroRows, weekStrip, foodDays, coachNoteCard, statTile, miniBars, openSheet, closeSheet };
+  App.ui = { ringMarkup, animateRings, macroRows, cycleStrip, cycleMini, foodDays, coachNoteCard, statTile, miniBars, openSheet, closeSheet };
 })(window.App = window.App || {});

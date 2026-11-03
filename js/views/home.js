@@ -2,21 +2,21 @@
   "use strict";
 
   const DATA = App.data;
-  const STATE = App.state;
+  const CYCLE = App.cycle;
   const {
-    NOW, TODAY, NOW_MINUTES, DAY_SHORT, WEEK_DATES, SESSION_COUNT, intFmt, oneFmt,
-    weightFmt, addDays, icon, escapeHtml, plural, one, num, weight, formatLongDate,
-    daysBetween, isoDate, formatShortDate, percent,
-    greetingForHour, getNextMeal, getNextWorkout, sumDishes, menuTotals, planTotals,
-    eatenTotals, eatenMealCount, waterCount, workoutsDone,
+    NOW, TODAY, WEEK_DATES, icon, escapeHtml, plural, num, weight, percent,
+    formatLongDate, greetingForHour, getNextMeal, eatenTotals, waterCount,
   } = App.util;
-  const { ringMarkup, macroRows, weekStrip, foodDays, coachNoteCard, statTile, miniBars } = App.ui;
+  const { ringMarkup, macroRows, cycleMini, statTile, miniBars } = App.ui;
   App.views = App.views || {};
 
   function homeView() {
-    const session = DATA.schedule[TODAY];
+    const total = DATA.subscription.training.sessions;
+    const cycleData = CYCLE.current();
+    const hasPlan = CYCLE.hasPlan();
+    const done = CYCLE.doneCount(cycleData);
+    const next = hasPlan ? CYCLE.nextSession(cycleData) : null;
     const eaten = eatenTotals(TODAY);
-    const workouts = workoutsDone();
     const water = waterCount(TODAY);
     const latestMeasure = App.measurements.latest();
     const currentWeight = latestMeasure ? latestMeasure.values.weight : DATA.goal.current;
@@ -24,11 +24,16 @@
     const measuresDue = App.measurements.isDue();
     const caloriePercent = percent(eaten.kcal, DATA.targets.kcal);
     const calorieRing = ringMarkup(caloriePercent, { size: 42, stroke: 4 });
-    const todayExercises = session.rest ? null : STATE.exerciseDone[TODAY].filter(Boolean).length;
-    const trainingMeta = session.rest
-      ? "на неделе"
-      : `на неделе<span class="stat-extra">сегодня ${todayExercises} из ${session.exercises.length}</span>`;
     const waterFull = water >= DATA.targets.water;
+    const trainingMeta = hasPlan
+      ? CYCLE.status() === "completed" ? "цикл завершён" : `цикл №${cycleData.number}`
+      : "план не активен";
+    const trainingValue = hasPlan
+      ? `${done} <span class="stat-divider">/</span> ${total}`
+      : `<span class="stat-divider">—</span> / <span class="stat-divider">—</span>`;
+    const trainingSpoken = hasPlan
+      ? `${done} из ${total} тренировок цикла`
+      : "Персональный план тренировок не активирован";
     const stats = `
       <div class="stats-grid">
         ${statTile({
@@ -44,10 +49,8 @@
         })}
         ${statTile({
           href: "#/workouts", route: "workouts", label: "Тренировки", iconName: "dumbbell",
-          value: `${workouts} <span class="stat-divider">/</span> ${SESSION_COUNT}`,
-          spoken: `${workouts} из ${SESSION_COUNT} тренировок на неделе${todayExercises === null ? "" : `, сегодня ${todayExercises} из ${session.exercises.length}`}`,
-          meta: trainingMeta,
-          visual: miniBars(workouts, SESSION_COUNT),
+          value: trainingValue, spoken: trainingSpoken, meta: trainingMeta,
+          visual: miniBars(done, total),
         })}
         ${statTile({
           href: "#/reports", route: "reports", label: "Вес", iconName: "scale",
@@ -56,6 +59,15 @@
           meta: `<span class="stat-trend">${icon("trend-down")}−${weight(weightDelta)} кг с начала</span>`,
         })}
       </div>`;
+    const cycleCardMarkup = hasPlan
+      ? `<article class="week-card card">
+          <div class="card-head">
+            <h2 class="card-title">Цикл тренировок</h2>
+            <span class="card-hint">${done} из ${total}</span>
+          </div>
+          ${cycleMini(cycleData)}
+        </article>`
+      : "";
     return `
       <div class="screen-head">
         <span class="eyebrow"><span class="eyebrow-dot"></span>${formatLongDate(WEEK_DATES[TODAY])}</span>
@@ -63,82 +75,75 @@
       </div>
       ${measuresDue ? `<a class="measure-reminder" href="#/reports" data-action="open-measure-form"><span class="measure-reminder-icon">${icon("calendar")}</span><span class="measure-reminder-copy"><strong>Пора внести замеры — раз в неделю</strong><span>Так прогресс виден точнее</span></span><span class="measure-reminder-cta">Внести ${icon("chevron-right")}</span></a>` : ""}
       <div class="dash-grid">
-        ${session.rest ? restTodayCard(session) : workoutTodayCard(session)}
+        ${next ? trainingHero(cycleData, next, total) : planHero()}
         ${stats}
         ${goalCard()}
         <article class="macro-card card" aria-label="Макросы за сегодня">
           <div class="card-head"><h2 class="card-title">Макросы сегодня</h2><span class="card-hint">из нормы</span></div>
           ${macroRows(eaten)}
         </article>
-        <article class="week-card card">
-          <div class="card-head">
-            <h2 class="card-title">Тренировочная неделя</h2>
-            <span class="card-hint">${workouts} из ${SESSION_COUNT} ${plural(SESSION_COUNT, ["тренировки", "тренировок", "тренировок"])}</span>
-          </div>
-          ${weekStrip(null, "open-workout")}
-        </article>
+        ${cycleCardMarkup}
         <div class="home-side">
           ${messageCard()}
           ${nextMealCard()}
         </div>
       </div>`;
   }
-  function workoutTodayCard(session) {
-    const total = session.exercises.length;
-    const finished = STATE.finished[TODAY];
+
+  function trainingHero(cycleData, session, total) {
+    const count = CYCLE.itemCount(session);
+    const days = CYCLE.daysSince(CYCLE.lastDoneDate(cycleData));
+    const lastText = CYCLE.lastDoneText(cycleData);
+    let note = "";
+    if (days === 0) {
+      note = `Сегодня вы уже тренировались. Отдых — часть плана; следующая тренировка — №${session.number}.`;
+    } else if (lastText) {
+      note = `Последняя тренировка: ${lastText}`;
+    }
     return `
-      <article class="today-card card${finished ? " today-card--done" : ""}">
+      <article class="today-card card">
         <span class="hero-art" aria-hidden="true"></span>
         <div class="hero-content">
           <div class="hero-top">
-            <span class="hero-tag"><span class="eyebrow-dot"></span>Сегодня · ${DAY_SHORT[TODAY]}</span>
-            <span class="hero-status">${finished ? "Завершена" : session.intensity}</span>
+            <span class="hero-tag"><span class="eyebrow-dot"></span>Тренировка ${session.number} из ${total}</span>
+            <span class="hero-status">Следующая</span>
           </div>
           <h2 class="today-title">${escapeHtml(session.title)}</h2>
           <div class="hero-meta">
-            <span>${icon("clock")}${session.duration} мин</span>
-            <span>${icon("dumbbell")}${total} ${plural(total, ["упражнение", "упражнения", "упражнений"])}</span>
+            <span>${icon("clock")}${session.minutes} мин</span>
+            <span>${icon("dumbbell")}${count} ${plural(count, ["упражнение", "упражнения", "упражнений"])}</span>
           </div>
           <div class="hero-chips">${session.muscles.map((muscle) => `<span class="chip">${escapeHtml(muscle)}</span>`).join("")}</div>
-          <button class="btn btn--primary hero-action" type="button" data-action="open-workout" data-day="${TODAY}">
+          ${note ? `<p class="today-copy">${escapeHtml(note)}</p>` : ""}
+          <button class="btn btn--primary hero-action" type="button" data-action="open-session" data-session="${session.number}" data-focus="home-open-session">
             Открыть тренировку ${icon("arrow-right")}
           </button>
         </div>
       </article>`;
   }
-  function restTodayCard(session) {
-    const next = getNextWorkout(TODAY);
-    const nextMarkup = next ? nextWorkoutMini(next, "open-workout") : "";
+
+  function planHero() {
+    const completed = CYCLE.status() === "completed";
+    const message = completed
+      ? "Цикл завершён — отличная работа! Новый персональный план готовит Вадим."
+      : "Персональные тренировки не подключены. Пока доступны общие рекомендации.";
     return `
       <article class="today-card today-card--rest card">
         <span class="hero-art" aria-hidden="true"></span>
         <div class="hero-content">
           <div class="hero-top">
-            <span class="hero-tag"><span class="eyebrow-dot"></span>Сегодня · ${DAY_SHORT[TODAY]}</span>
-            <span class="rest-badge" aria-hidden="true">${icon("moon")}</span>
+            <span class="hero-tag"><span class="eyebrow-dot"></span>${completed ? "Цикл завершён" : "Пакет не активирован"}</span>
+            <span class="rest-badge" aria-hidden="true">${icon("user")}</span>
           </div>
-          <h2 class="today-title">День восстановления</h2>
-          <p class="today-copy">${escapeHtml(session.homeTip || session.tip)}</p>
-          <div class="hero-chips">
-            ${(session.ideas || []).slice(0, 2).map((idea) => `<span class="chip">${escapeHtml(idea)}</span>`).join("")}
-          </div>
-          ${nextMarkup}
+          <h2 class="today-title">Персональный план</h2>
+          <p class="today-copy">${escapeHtml(message)}</p>
+          <button class="btn btn--primary hero-action" type="button" data-action="open-contact" data-focus="home-contact">
+            Связаться с Вадимом ${icon("arrow-right")}
+          </button>
         </div>
       </article>`;
   }
-  function nextWorkoutMini(next, action) {
-    const copy = `
-      <span class="hero-next-copy">
-        <span>Следующая тренировка</span>
-        <strong>${DAY_SHORT[next.index]} · ${escapeHtml(next.session.title)}</strong>
-        <small>${next.session.duration} мин · ${next.session.exercises.length} ${plural(next.session.exercises.length, ["упражнение", "упражнения", "упражнений"])}</small>
-      </span>
-      <span class="hero-next-icon" aria-hidden="true">${icon("arrow-right")}</span>`;
-    if (next.inWeek) {
-      return `<button class="hero-next" type="button" data-action="${action}" data-day="${next.index}">${copy}</button>`;
-    }
-    return `<div class="hero-next">${copy}</div>`;
-  }
+
   function goalCard() {
     const start = DATA.goal.start;
     const latest = App.measurements.latest();
@@ -206,6 +211,7 @@
         </figure>
       </article>`;
   }
+
   function messageCard() {
     return `
       <article class="message-card card">
@@ -218,6 +224,7 @@
         <button class="message-contact" type="button" data-action="open-contact">Связаться с Вадимом ${icon("arrow-right")}</button>
       </article>`;
   }
+
   function nextMealCard() {
     const next = getNextMeal();
     const meal = DATA.mealTimes[next.index];
