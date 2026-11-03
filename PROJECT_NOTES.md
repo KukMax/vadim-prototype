@@ -108,7 +108,8 @@ js/app.js  render(route, options)
       • анимация колец (если не options.static)
       • document.title из PAGE_TITLES, body[data-route]
       • syncNavigation() / syncClientMeta() / syncDock()
-      • scrollTo(0,0) и возврат фокуса (heading | focusSelector | focusKey)
+      • scrollTo(0,0) только при смене экрана, иначе возврат window.scrollY
+      • возврат фокуса (heading | focusSelector | focusKey) с preventScroll: true
       ▼
 пользователь жмёт [data-action]
       ▼
@@ -126,7 +127,9 @@ js/app.js  render(route, options)
 - `render()` перерисовывает **весь экран**. `options.static: true` — не перезапускать
   анимацию колец (чтобы прогресс не «прыгал» после каждого клика).
 - Сохранность между перерисовками обеспечивают только `STATE` и `data-focus`-ключи;
-  позиция скролла сбрасывается наверх намеренно.
+  позиция скролла сохраняется при обновлении «на месте» (`static: true` или тот же
+  маршрут) и сбрасывается наверх только при реальной смене экрана; повторный клик
+  по ссылке текущего маршрута — наверх.
 - Персистентность: **только тема** (`localStorage["vadim-theme"]`). Замеры, фото
   профиля (`STATE.avatar`, data URL) и все отметки живут в памяти до перезагрузки.
 - Побочные ограничения: экран рендерится целиком, поэтому обработчики вешаются
