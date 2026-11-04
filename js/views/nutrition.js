@@ -72,10 +72,11 @@
         </aside>
       </div>`;
   }
-  function mealCard(dayIndex, mealIndex, dishes) {
+  // readOnly используется демо-кабинетом: без отметок «Съел» и без прогресса.
+  function mealCard(dayIndex, mealIndex, dishes, readOnly) {
     const meal = DATA.mealTimes[mealIndex];
     const totals = sumDishes(dishes);
-    const eaten = STATE.meals[dayIndex][mealIndex];
+    const eaten = !readOnly && STATE.meals[dayIndex][mealIndex];
     return `
       <article class="meal-card card${eaten ? " is-eaten" : ""}">
         <div class="meal-head">
@@ -91,9 +92,9 @@
         </ul>
         <div class="meal-foot">
           <div class="meal-total"><span>Итого за приём</span><strong>Б ${one(totals.p)} · Ж ${one(totals.f)} · У ${one(totals.c)}</strong></div>
-          <button class="meal-toggle" type="button" data-action="toggle-meal" data-day="${dayIndex}" data-index="${mealIndex}" data-focus="meal-${dayIndex}-${mealIndex}" aria-pressed="${eaten}" aria-label="${eaten ? "Снять отметку" : "Отметить"} «${meal.name}»">
+          ${readOnly ? "" : `<button class="meal-toggle" type="button" data-action="toggle-meal" data-day="${dayIndex}" data-index="${mealIndex}" data-focus="meal-${dayIndex}-${mealIndex}" aria-pressed="${eaten}" aria-label="${eaten ? "Снять отметку" : "Отметить"} «${meal.name}»">
             ${icon(eaten ? "check" : "plus")}${eaten ? "Съедено" : "Съел"}
-          </button>
+          </button>`}
         </div>
       </article>`;
   }
@@ -160,8 +161,8 @@
       <article class="supplements-card card">
         <button class="supplements-toggle" type="button" data-action="toggle-supplements" aria-expanded="${open}" aria-controls="supplements-body">
           <span class="supplements-head-copy">
-            <span class="eyebrow">Добавки</span>
-            <strong>Рекомендации по добавкам</strong>
+            <span class="eyebrow">Спортпит и витамины</span>
+            <strong>Рекомендации по спортпиту и витаминам</strong>
           </span>
           <span class="supplements-chevron" aria-hidden="true">${icon("chevron-down")}</span>
         </button>
@@ -175,5 +176,5 @@
       </article>`;
   }
 
-  App.views.nutrition = { view: nutritionView };
+  App.views.nutrition = { view: nutritionView, mealCard };
 })(window.App = window.App || {});

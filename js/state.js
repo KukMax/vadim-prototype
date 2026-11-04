@@ -4,6 +4,17 @@
   const DATA = App.data;
   const { NOW, NOW_MINUTES, TODAY, isoDate, parseIsoDate, daysBetween, plural, toMinutes } = App.util;
   const PROFILE_KEY = "trenio-profile";
+  // Хранится только стадия "guest" | "client". Почта, код и пароль — никогда.
+  const SESSION_KEY = "trenio-session";
+
+  function loadStage() {
+    try {
+      const saved = window.localStorage.getItem(SESSION_KEY);
+      return saved === "client" || saved === "guest" ? saved : "guest";
+    } catch (error) {
+      return "guest";
+    }
+  }
 
   function defaultProfile() {
     return {
@@ -85,6 +96,7 @@
       },
       training: { status: DATA.subscription.training.status },
       profile: loadProfile(),
+      auth: { stage: loadStage(), email: "" },
     };
   }
 
@@ -252,8 +264,50 @@
     },
   };
 
+  const auth = {
+    stage() {
+      return STATE.auth.stage;
+    },
+    isClient() {
+      return STATE.auth.stage === "client";
+    },
+    isPublic() {
+      return STATE.auth.stage !== "client";
+    },
+    email() {
+      return STATE.auth.email;
+    },
+    // Почта живёт только в памяти страницы: ни storage, ни URL, ни лог.
+    setEmail(value) {
+      STATE.auth.email = typeof value === "string" ? value.trim() : "";
+    },
+    // "verifying" и "onboarding" не переживают перезагрузку — сохраняем только
+    // стадии, которые можно восстановить без введённых данных.
+    setStage(stage) {
+      if (["guest", "verifying", "onboarding", "client"].indexOf(stage) === -1) return;
+      STATE.auth.stage = stage;
+      if (stage === "guest") STATE.auth.email = "";
+      try {
+        if (stage === "client" || stage === "guest") window.localStorage.setItem(SESSION_KEY, stage);
+        else window.localStorage.removeItem(SESSION_KEY);
+      } catch (error) {
+        /* приватный режим — сессия останется только в памяти */
+      }
+    },
+    reset() {
+      STATE.auth.stage = "guest";
+      STATE.auth.email = "";
+      try {
+        window.localStorage.removeItem(SESSION_KEY);
+      } catch (error) {
+        /* хранилище недоступно — сбрасывать нечего */
+      }
+    },
+  };
+
   App.state = STATE;
   App.measurements = measurements;
   App.cycle = cycle;
   App.profile = profile;
+  App.auth = auth;
 })(window.App = window.App || {});

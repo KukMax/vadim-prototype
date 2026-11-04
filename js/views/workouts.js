@@ -112,13 +112,16 @@
       </div>`;
   }
 
+  // readOnly: true — архивный цикл (статические отметки), "demo" — публичное демо
+  // без отметок: ни живого прогресса, ни зелёных галочек.
   function simpleRow(cycleData, session, item, readOnly) {
-    const done = C.isItemDone(cycleData, item.id);
+    const demo = readOnly === "demo";
+    const done = !demo && C.isItemDone(cycleData, item.id);
     return `
       <div class="simple-row${done ? " is-done" : ""}">
         <span class="simple-name">${escapeHtml(item.name)}</span>
         <span class="chip chip--meta">${icon("clock")}${escapeHtml(item.duration)}</span>
-        ${readOnly || !C.isCurrent(cycleData) ? `<span class="simple-mark" aria-hidden="true">${icon("check")}</span>` : checkButton(session, item, done)}
+        ${demo ? "" : readOnly || !C.isCurrent(cycleData) ? `<span class="simple-mark" aria-hidden="true">${icon("check")}</span>` : checkButton(session, item, done)}
       </div>`;
   }
 
@@ -130,7 +133,8 @@
   }
 
   function mainRow(cycleData, session, item, index, readOnly) {
-    const done = C.isItemDone(cycleData, item.id);
+    const demo = readOnly === "demo";
+    const done = !demo && C.isItemDone(cycleData, item.id);
     const cells = [
       ["Подходы", item.sets],
       ["Вес", item.weight],
@@ -147,7 +151,7 @@
         ${item.note ? `<p class="ex-note">${escapeHtml(item.note)}</p>` : ""}
         <div class="ex-actions">
           <a class="tool-btn" href="${item.videoUrl}" target="_blank" rel="noopener noreferrer" data-focus="video-${item.id}" aria-label="Смотреть видео: ${escapeHtml(item.name)}">${icon("play")}</a>
-          ${readOnly || !C.isCurrent(cycleData) ? `<span class="check-btn is-static is-done" aria-hidden="true">${icon("check")}</span>` : checkButton(session, item, done)}
+          ${demo ? "" : readOnly || !C.isCurrent(cycleData) ? `<span class="check-btn is-static is-done" aria-hidden="true">${icon("check")}</span>` : checkButton(session, item, done)}
         </div>
       </div>`;
   }
@@ -323,5 +327,5 @@
     return pageHead() + withTabs + body;
   }
 
-  App.views.workouts = { view: workoutsView };
+  App.views.workouts = { view: workoutsView, sessionCard, blocksView, legendButton };
 })(window.App = window.App || {});

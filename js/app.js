@@ -21,6 +21,28 @@
 
   /* ---------- routing ---------- */
 
+  // Публичный вход живёт вне кабинета: гость по умолчанию попадает на #/welcome,
+  // клиент — на #/home. "verifying" и "onboarding" существуют только в памяти.
+  const PUBLIC_ROUTES = ["welcome", "demo", "register", "verify", "onboarding"];
+
+  function isPublicRoute(route) {
+    return PUBLIC_ROUTES.indexOf(route) !== -1;
+  }
+
+  function startRoute() {
+    return STATE.auth.stage === "client" ? "home" : "welcome";
+  }
+
+  function guardRoute(route) {
+    const stage = STATE.auth.stage;
+    const client = stage === "client";
+    if (!client && !isPublicRoute(route)) return "welcome";
+    if (client && isPublicRoute(route)) return "home";
+    if (route === "verify" && stage !== "verifying") return "welcome";
+    if (route === "onboarding" && stage !== "onboarding") return "welcome";
+    return route;
+  }
+
   function rawRoute() {
     const value = location.hash.replace(/^#\/?/, "").split("?")[0];
     return value || "";
@@ -28,16 +50,13 @@
 
   function resolveRoute() {
     let route = rawRoute();
-    if (!route) {
-      history.replaceState(null, "", "#/home");
-      route = "home";
-    } else if (route === "supplements") {
-      history.replaceState(null, "", "#/nutrition");
+    if (route === "supplements") {
       route = "nutrition";
     } else if (ROUTES.indexOf(route) === -1) {
-      history.replaceState(null, "", "#/home");
-      route = "home";
+      route = startRoute();
     }
+    route = guardRoute(route);
+    if (rawRoute() !== route) history.replaceState(null, "", "#/" + route);
     return route;
   }
 
@@ -66,6 +85,8 @@
     const jumpTop = routeChanged || !!settings.scrollTop;
     const savedScrollY = window.scrollY || window.pageYOffset || 0;
     currentRoute = route;
+    // Оболочка переключается до сборки вьюхи: публичные экраны рисуются без кабинета.
+    document.body.dataset.shell = isPublicRoute(route) ? "public" : "app";
     let html;
     try {
       html = view.view();
@@ -79,6 +100,9 @@
       item.hidden = item !== screen;
     });
     screen.hidden = false;
+    // Отсчёт повторной отправки принадлежит только #/verify: уход со экрана его гасит.
+    if (route === "verify") startResend();
+    else stopResend();
     if (settings.static) {
       screen.querySelectorAll(".ring-value").forEach((ring) => {
         ring.style.strokeDashoffset = ring.dataset.offset;
@@ -92,6 +116,7 @@
     syncClientMeta();
     syncProfileChrome();
     syncDock();
+    syncDemoBar();
     if (jumpTop) {
       window.scrollTo(0, 0);
     } else {
@@ -150,6 +175,12 @@
   /* ---------- chrome ---------- */
 
   function syncNavigation(route) {
+    if (isPublicRoute(route)) {
+      document.querySelectorAll(".nav-link[data-nav], .tab[data-nav]").forEach((link) => {
+        link.removeAttribute("aria-current");
+      });
+      return;
+    }
     document.querySelectorAll(".nav-link[data-nav], .tab[data-nav]").forEach((link) => {
       if (link.dataset.nav === route) link.setAttribute("aria-current", "page");
       else link.removeAttribute("aria-current");
@@ -164,6 +195,21 @@
     target.textContent = `${DATA.client.age} года · ${DATA.client.height} см · ${weight(current)} кг`;
   }
 
+  // Логотип в шапке кабинета: гостю — на вход, клиенту — на главную.
+  function syncBrandLinks() {
+    const client = STATE.auth.stage === "client";
+    const href = client ? "#/home" : "#/welcome";
+    const label = client
+      ? "Trenio — фитнес тренер Вадим, на главную"
+      : "Trenio — фитнес тренер Вадим, на страницу входа";
+    document.querySelectorAll("a.brand--logo").forEach((link) => {
+      link.setAttribute("href", href);
+      link.setAttribute("aria-label", label);
+      if (client) link.dataset.nav = "home";
+      else link.removeAttribute("data-nav");
+    });
+  }
+
   function syncProfileChrome() {
     const src = STATE.profile.avatar;
     const top = document.getElementById("topbar-avatar");
@@ -176,6 +222,7 @@
       if (src) side.innerHTML = `<img class="avatar-img" src="${escapeHtml(src)}" alt="">`;
       else side.textContent = "А";
     }
+    syncBrandLinks();
   }
 
   function focusKey(key) {
@@ -204,6 +251,17 @@
     } catch (error) {
       /* Storage may be unavailable; the session still keeps the theme. */
     }
+  }
+
+  // Кнопки темы на публичных экранах живут вне ре-рендера: правим их на месте,
+  // чтобы фокус оставался на кнопке, а meta theme-color уже обновил applyTheme.
+  function syncThemeControls() {
+    const publicUi = App.publicUi;
+    document.querySelectorAll('[data-action="toggle-theme"]').forEach((button) => {
+      button.setAttribute("aria-pressed", STATE.theme === "light" ? "true" : "false");
+      button.setAttribute("aria-label", publicUi.themeLabel());
+      button.innerHTML = publicUi.themeIcon();
+    });
   }
 
   /* ---------- workout dock ---------- */
@@ -271,6 +329,256 @@
     });
     if (STATE.training.status === "completed") STATE.training.status = "active";
     render("workouts", { focusKey: "session-" + session.number });
+  }
+
+  /* ---------- демо: липкая панель ---------- */
+
+  // Панель «Зарегистрироваться» появляется только после того, как первая
+  // секция демо уехала за верх экрана: до этого кнопка и так видна в потоке.
+  let demoObserver = null;
+
+  function paintDemoBar(visible) {
+    const bar = document.querySelector('[data-role="demo-bar"]');
+    if (bar) bar.hidden = !visible;
+  }
+
+  function firstDemoSection() {
+    return document.querySelector("#demo-workout") || document.querySelector(".pub-section");
+  }
+
+  function demoBarOnScroll() {
+    const section = firstDemoSection();
+    if (!section) return;
+    paintDemoBar(section.getBoundingClientRect().bottom <= 0);
+  }
+
+  function syncDemoBar() {
+    if (demoObserver) {
+      demoObserver.disconnect();
+      demoObserver = null;
+    }
+    window.removeEventListener("scroll", demoBarOnScroll);
+    if (currentRoute !== "demo") {
+      paintDemoBar(false);
+      return;
+    }
+    const section = firstDemoSection();
+    paintDemoBar(false);
+    if (!section) return;
+    // Старые WebView без IntersectionObserver получают проверку по скроллу.
+    if (typeof window.IntersectionObserver !== "function") {
+      window.addEventListener("scroll", demoBarOnScroll, { passive: true });
+      demoBarOnScroll();
+      return;
+    }
+    demoObserver = new window.IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        paintDemoBar(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      });
+    }, { threshold: 0 });
+    demoObserver.observe(section);
+  }
+
+  /* ---------- публичный вход ---------- */
+
+  // Публичные формы живут вне клиентских обработчиков и на file:// без
+  // preventDefault перезагружали бы страницу вместе с введёнными данными.
+  const PUBLIC_FORMS = ["login", "register", "verify"];
+  const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const CODE_LENGTH = 6;
+  const RESEND_SECONDS = 30;
+
+  function publicFieldError(form, name, message) {
+    const wrapper = form ? form.querySelector(`.pub-field[data-field="${name}"]`) : null;
+    if (!wrapper) return null;
+    const input = wrapper.querySelector("input");
+    const error = wrapper.querySelector(".field-error");
+    wrapper.classList.toggle("is-invalid", !!message);
+    if (input) input.setAttribute("aria-invalid", message ? "true" : "false");
+    if (error) {
+      error.textContent = message || "";
+      error.hidden = !message;
+    }
+    return input;
+  }
+
+  // Демо-вход: проверяем формат и заполненность, но значения никуда не
+  // сохраняем и не логируем — в сессии остаётся только этап "client".
+  function submitLogin(form) {
+    const emailInput = form.elements.email;
+    const passwordInput = form.elements.password;
+    const emailRaw = String((emailInput && emailInput.value) || "").trim();
+    const passwordRaw = String((passwordInput && passwordInput.value) || "");
+    let firstInvalid = null;
+    if (!emailRaw) {
+      publicFieldError(form, "login-email", "Введите почту.");
+      firstInvalid = emailInput;
+    } else if (!EMAIL_PATTERN.test(emailRaw)) {
+      publicFieldError(form, "login-email", "Проверьте почту, например name@mail.ru.");
+      firstInvalid = emailInput;
+    } else {
+      publicFieldError(form, "login-email", "");
+    }
+    if (!passwordRaw) {
+      publicFieldError(form, "login-password", "Введите пароль.");
+      if (!firstInvalid) firstInvalid = passwordInput;
+    } else {
+      publicFieldError(form, "login-password", "");
+    }
+    if (firstInvalid) {
+      firstInvalid.focus({ preventScroll: true });
+      return;
+    }
+    App.auth.setStage("client");
+    go("home");
+    toast("Вы вошли в демо-кабинет");
+  }
+
+  /* ---------- регистрация, подтверждение, анкета ---------- */
+
+  let resendTimer = 0;
+  let resendLeft = 0;
+
+  // Подсказка под паролем становится нейтральной галочкой, когда длина в норме.
+  function updatePasswordHint(form) {
+    const input = form.elements.password;
+    const hint = form.querySelector('[data-role="pw-hint"]');
+    if (!input || !hint) return;
+    hint.classList.toggle("is-met", input.value.length >= 8);
+  }
+
+  // Почта и пароли остаются только в памяти страницы: ни логов, ни storage, ни URL.
+  function submitRegister(form) {
+    const emailInput = form.elements.email;
+    const passwordInput = form.elements.password;
+    const repeatInput = form.elements.password2;
+    const consentInput = form.elements.consent;
+    const emailRaw = String((emailInput && emailInput.value) || "").trim();
+    const passwordRaw = String((passwordInput && passwordInput.value) || "");
+    const repeatRaw = String((repeatInput && repeatInput.value) || "");
+    let firstInvalid = null;
+    if (!emailRaw) {
+      publicFieldError(form, "register-email", "Введите почту.");
+      firstInvalid = emailInput;
+    } else if (!EMAIL_PATTERN.test(emailRaw)) {
+      publicFieldError(form, "register-email", "Проверьте почту, например name@mail.ru.");
+      firstInvalid = emailInput;
+    } else {
+      publicFieldError(form, "register-email", "");
+    }
+    if (passwordRaw.length < 8) {
+      publicFieldError(form, "register-password", "Пароль должен быть не короче 8 символов.");
+      if (!firstInvalid) firstInvalid = passwordInput;
+    } else {
+      publicFieldError(form, "register-password", "");
+    }
+    if (!repeatRaw) {
+      publicFieldError(form, "register-password2", "Повторите пароль.");
+      if (!firstInvalid) firstInvalid = repeatInput;
+    } else if (repeatRaw !== passwordRaw) {
+      publicFieldError(form, "register-password2", "Пароли не совпадают.");
+      if (!firstInvalid) firstInvalid = repeatInput;
+    } else {
+      publicFieldError(form, "register-password2", "");
+    }
+    if (!consentInput || !consentInput.checked) {
+      publicFieldError(form, "register-consent", "Отметьте согласие на обработку данных.");
+      if (!firstInvalid) firstInvalid = consentInput;
+    } else {
+      publicFieldError(form, "register-consent", "");
+    }
+    if (firstInvalid) {
+      firstInvalid.focus({ preventScroll: true });
+      return;
+    }
+    // После отправки пароли из формы убираем: они больше не нужны.
+    if (passwordInput) passwordInput.value = "";
+    if (repeatInput) repeatInput.value = "";
+    updatePasswordHint(form);
+    App.auth.setEmail(emailRaw);
+    App.auth.setStage("verifying");
+    go("verify");
+  }
+
+  function legalSheet(key) {
+    const doc = DATA.legalDocs[key];
+    if (!doc) return;
+    openSheet({
+      title: doc.title,
+      bodyHtml: `
+        <div class="contact-sheet">
+          <p class="sheet-lead">${escapeHtml(doc.body)}</p>
+          <button class="btn btn--ghost contact-sheet-cancel" type="button" data-action="close-sheet">Понятно</button>
+        </div>`,
+    });
+  }
+
+  // Отсчёт у кнопки повторной отправки: рисуем в разметку #/verify, живёт только там.
+  function paintResend() {
+    const button = document.querySelector('[data-role="resend"]');
+    const timer = document.querySelector('[data-role="resend-timer"]');
+    if (button) {
+      button.disabled = resendLeft > 0;
+      button.setAttribute("aria-disabled", String(resendLeft > 0));
+    }
+    if (timer) timer.textContent = resendLeft > 0 ? "через " + resendLeft + " с" : "";
+  }
+
+  function startResend() {
+    window.clearInterval(resendTimer);
+    resendLeft = RESEND_SECONDS;
+    paintResend();
+    resendTimer = window.setInterval(() => {
+      resendLeft = resendLeft > 0 ? resendLeft - 1 : 0;
+      if (!resendLeft) window.clearInterval(resendTimer);
+      paintResend();
+    }, 1000);
+  }
+
+  function stopResend() {
+    window.clearInterval(resendTimer);
+    resendTimer = 0;
+    resendLeft = 0;
+  }
+
+  function codeFields(form) {
+    return Array.prototype.slice.call(form.querySelectorAll(".code-input"));
+  }
+
+  function verifyError(message) {
+    const error = document.getElementById("verify-error");
+    if (!error) return;
+    error.textContent = message || "";
+    error.hidden = !message;
+  }
+
+  function fillCode(form, digits) {
+    const fields = codeFields(form);
+    fields.forEach((field, index) => {
+      field.value = digits.charAt(index) || "";
+    });
+    const target = fields[Math.min(digits.length, fields.length - 1)];
+    if (target) target.focus({ preventScroll: true });
+  }
+
+  function submitVerify(form) {
+    const fields = codeFields(form);
+    const code = fields.map((field) => field.value).join("");
+    if (code.length < CODE_LENGTH) {
+      verifyError("Введите все 6 цифр.");
+      const empty = fields.find((field) => !field.value);
+      if (empty) empty.focus({ preventScroll: true });
+      return;
+    }
+    if (code !== DATA.demoCode) {
+      verifyError("Неверный код");
+      fillCode(form, "");
+      return;
+    }
+    verifyError("");
+    App.auth.setStage("onboarding");
+    toast("Почта подтверждена");
+    go("onboarding");
   }
 
   /* ---------- measurement form ---------- */
@@ -378,6 +686,20 @@
             </a>
           </div>
           <button class="btn btn--ghost contact-sheet-cancel" type="button" data-action="close-sheet">Отмена</button>
+        </div>`,
+    });
+  }
+
+  function logoutSheet() {
+    openSheet({
+      title: "Выйти из аккаунта?",
+      bodyHtml: `
+        <div class="contact-sheet">
+          <p class="sheet-lead">Кабинет закроется на этом устройстве. Замеры и прогресс останутся, пока вы не сбросите демо-данные.</p>
+          <div class="sheet-actions">
+            <button class="btn btn--primary" type="button" data-action="logout-confirm">Выйти</button>
+            <button class="btn btn--ghost" type="button" data-action="close-sheet">Отмена</button>
+          </div>
         </div>`,
     });
   }
@@ -767,6 +1089,8 @@
         } catch (error) {
           /* хранилище недоступно — перезагрузка всё равно сбросит сессию */
         }
+        // Сброс демо-данных выводит из кабинета: ключ сессии тоже чистим.
+        App.auth.reset();
         location.reload();
         break;
       case "pick-food-day": {
@@ -842,6 +1166,63 @@
       case "install-confirm":
         confirmInstall();
         break;
+      case "toggle-password": {
+        const input = document.getElementById(trigger.dataset.target || "");
+        if (!(input instanceof HTMLInputElement)) return;
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        trigger.setAttribute("aria-pressed", String(show));
+        trigger.innerHTML = `${icon(show ? "eye-off" : "eye")}<span>${show ? "Скрыть" : "Показать"}</span>`;
+        break;
+      }
+      case "toggle-theme":
+        applyTheme(STATE.theme === "light" ? "dark" : "light");
+        syncThemeControls();
+        break;
+      case "forgot-password":
+        openSheet({
+          title: "Восстановление пароля",
+          bodyHtml: `
+            <div class="contact-sheet">
+              <p class="sheet-lead">В демо-версии восстановление недоступно. В рабочей версии ссылка для сброса придёт на вашу почту.</p>
+              <button class="btn btn--ghost contact-sheet-cancel" type="button" data-action="close-sheet">Понятно</button>
+            </div>`,
+        });
+        break;
+      case "coach-soon":
+        toast("Кабинет тренера появится в следующей версии");
+        break;
+      case "legal":
+        legalSheet(trigger.dataset.legal);
+        break;
+      case "resend-code":
+        if (resendLeft > 0) return;
+        startResend();
+        toast("Код отправлен повторно");
+        break;
+      case "finish-onboarding":
+        App.auth.setStage("client");
+        go("home");
+        break;
+      case "leave-onboarding":
+        App.auth.setStage("guest");
+        go("welcome");
+        break;
+      case "demo-client":
+        if (trigger.dataset.demo !== "true") return;
+        App.auth.setStage("client");
+        go("home");
+        break;
+      case "logout":
+        logoutSheet();
+        break;
+      case "logout-confirm":
+        // Стадия — единственное, что пишется в хранилище; введённых данных нет.
+        App.auth.setStage("guest");
+        closeSheet();
+        go("welcome");
+        toast("Вы вышли из аккаунта");
+        break;
       default:
         break;
     }
@@ -867,12 +1248,45 @@
     }
     if (target instanceof HTMLInputElement && target.dataset.action === "set-theme") {
       applyTheme(target.value);
+      return;
+    }
+    if (target instanceof HTMLInputElement && target.name === "consent") {
+      const form = target.closest('[data-form="register"]');
+      if (form) publicFieldError(form, "register-consent", "");
     }
   });
 
   document.addEventListener("input", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) return;
+    const loginForm = target.closest('[data-form="login"]');
+    if (loginForm) {
+      if (target.name === "email") publicFieldError(loginForm, "login-email", "");
+      if (target.name === "password") publicFieldError(loginForm, "login-password", "");
+      return;
+    }
+    const registerForm = target.closest('[data-form="register"]');
+    if (registerForm) {
+      if (target.name === "email") publicFieldError(registerForm, "register-email", "");
+      if (target.name === "password") {
+        publicFieldError(registerForm, "register-password", "");
+        updatePasswordHint(registerForm);
+      }
+      if (target.name === "password2") publicFieldError(registerForm, "register-password2", "");
+      return;
+    }
+    const verifyForm = target.closest('[data-form="verify"]');
+    if (verifyForm) {
+      // В поле кода остаётся одна цифра, ввод переводит фокус на следующее поле.
+      target.value = target.value.replace(/\D/g, "").slice(-1);
+      if (target.value) {
+        const fields = codeFields(verifyForm);
+        const index = fields.indexOf(target);
+        if (index > -1 && index < fields.length - 1) fields[index + 1].focus({ preventScroll: true });
+      }
+      verifyError("");
+      return;
+    }
     if (target.closest('[data-form="contacts"]')) {
       if (target.name === "phone" || target.name === "email") fieldError({ key: target.name }, "");
       return;
@@ -883,9 +1297,51 @@
     if (field) fieldError(field, "");
   });
 
+  document.addEventListener("keydown", (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !input.classList.contains("code-input")) return;
+    const form = input.closest('[data-form="verify"]');
+    if (!form) return;
+    const fields = codeFields(form);
+    const index = fields.indexOf(input);
+    if (event.key === "Backspace" && !input.value && index > 0) {
+      event.preventDefault();
+      fields[index - 1].value = "";
+      fields[index - 1].focus({ preventScroll: true });
+      return;
+    }
+    if (event.key === "ArrowLeft" && index > 0) {
+      event.preventDefault();
+      fields[index - 1].focus({ preventScroll: true });
+    } else if (event.key === "ArrowRight" && index < fields.length - 1) {
+      event.preventDefault();
+      fields[index + 1].focus({ preventScroll: true });
+    }
+  });
+
+  document.addEventListener("paste", (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !input.classList.contains("code-input")) return;
+    const form = input.closest('[data-form="verify"]');
+    if (!form) return;
+    const data = event.clipboardData;
+    const digits = String((data && data.getData("text")) || "").replace(/\D/g, "").slice(0, CODE_LENGTH);
+    if (!digits) return;
+    event.preventDefault();
+    fillCode(form, digits);
+    verifyError("");
+  });
+
   document.addEventListener("submit", (event) => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
+    if (PUBLIC_FORMS.indexOf(form.dataset.form) !== -1) {
+      event.preventDefault();
+      if (form.dataset.form === "login") submitLogin(form);
+      else if (form.dataset.form === "register") submitRegister(form);
+      else if (form.dataset.form === "verify") submitVerify(form);
+      return;
+    }
     if (form.dataset.form === "contacts") {
       event.preventDefault();
       saveContacts(form);

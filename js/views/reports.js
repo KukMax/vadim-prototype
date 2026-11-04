@@ -215,5 +215,5 @@
       </article>`;
   }
 
-  App.views.reports = { view: reportsView };
+  App.views.reports = { view: reportsView, lineChart };
 })(window.App = window.App || {});

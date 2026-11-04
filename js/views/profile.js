@@ -41,6 +41,12 @@
             <button class="action-row" type="button" data-action="install-app"${standalone ? " hidden" : ""}><span class="action-icon">${icon("install")}</span><span class="action-label">Добавить на главный экран</span><span class="action-chevron" aria-hidden="true">${icon("chevron-right")}</span></button>
           </div>
         </article>
+        <article class="actions-card card">
+          <div class="card-head"><h2 class="card-title">Аккаунт</h2></div>
+          <div class="action-list">
+            <button class="action-row" type="button" data-action="logout"><span class="action-icon">${icon("log-out")}</span><span class="action-label">Выйти из аккаунта</span><span class="action-chevron" aria-hidden="true">${icon("chevron-right")}</span></button>
+          </div>
+        </article>
         ${demoCard()}
       </div>`;
   }
@@ -118,7 +124,7 @@
           </div>
           <div class="subscription-row">
             <div class="subscription-row-head">
-              <span class="subscription-name">Питание и добавки</span>
+              <span class="subscription-name">Питание</span>
               <span class="${nutritionActive ? "chip chip--accent" : "chip chip--muted"}">${nutritionActive ? "Активен" : "Не активирован"}</span>
             </div>
             ${nutritionActive ? `<p class="subscription-detail">до ${formatShortDateNoYear(untilIso)} · осталось ${remaining} ${plural(remaining, ["день", "дня", "дней"])}</p>
