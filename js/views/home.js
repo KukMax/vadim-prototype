@@ -3,6 +3,8 @@
 
   const DATA = App.data;
   const CYCLE = App.cycle;
+  const STATE = App.state;
+  const SUB = App.subscription;
   const {
     NOW, TODAY, WEEK_DATES, icon, escapeHtml, plural, num, weight, percent,
     formatLongDate, greetingForHour, getNextMeal, eatenTotals, waterCount,
@@ -10,12 +12,40 @@
   const { ringMarkup, macroRows, cycleMini, statTile, miniBars } = App.ui;
   App.views = App.views || {};
 
+  const PENDING_TEXT = DATA.pendingText;
+
+  // Пакеты, которые ждут активации: статусы ставит отправка анкеты, поэтому
+  // достаточно их — демо-панель может активировать пакет, и чип исчезнет.
+  function pendingPackages() {
+    const packages = [];
+    if (STATE.training.status === "pending") packages.push("training");
+    if (STATE.nutrition && STATE.nutrition.status === "pending") packages.push("nutrition");
+    return packages;
+  }
+
+  function pendingBanner() {
+    const packages = pendingPackages();
+    if (!packages.length) return "";
+    const chips = packages.map((value) => `<span class="chip chip--pending">${value === "nutrition" ? "Питание" : "Тренировки"}</span>`).join("");
+    return `
+      <article class="pending-card card" aria-labelledby="home-pending-title">
+        <span class="pending-icon" aria-hidden="true">${icon("clock")}</span>
+        <div class="pending-body">
+          <h2 class="pending-title" id="home-pending-title">Ожидает активации</h2>
+          <p class="pending-text">${PENDING_TEXT}</p>
+          <div class="pending-chips">${chips}</div>
+        </div>
+      </article>`;
+  }
+
   function homeView() {
     const total = DATA.subscription.training.sessions;
     const cycleData = CYCLE.current();
+    const trainingStatus = SUB.status("training");
     const hasPlan = CYCLE.hasPlan();
     const done = CYCLE.doneCount(cycleData);
-    const next = hasPlan ? CYCLE.nextSession(cycleData) : null;
+    // Истёкший пакет ведёт себя как завершённый: открывать тренировку нельзя.
+    const next = trainingStatus === "active" ? CYCLE.nextSession(cycleData) : null;
     const eaten = eatenTotals(TODAY);
     const water = waterCount(TODAY);
     const latestMeasure = App.measurements.latest();
@@ -25,15 +55,17 @@
     const caloriePercent = percent(eaten.kcal, DATA.targets.kcal);
     const calorieRing = ringMarkup(caloriePercent, { size: 42, stroke: 4 });
     const waterFull = water >= DATA.targets.water;
-    const trainingMeta = hasPlan
-      ? CYCLE.status() === "completed" ? "цикл завершён" : `цикл №${cycleData.number}`
-      : "план не активен";
+    const trainingMeta = trainingStatus === "active"
+      ? `цикл №${cycleData.number}`
+      : trainingStatus === "completed"
+        ? "цикл завершён"
+        : CYCLE.isPending() ? "ожидает активации" : "план не активен";
     const trainingValue = hasPlan
       ? `${done} <span class="stat-divider">/</span> ${total}`
       : `<span class="stat-divider">—</span> / <span class="stat-divider">—</span>`;
     const trainingSpoken = hasPlan
       ? `${done} из ${total} тренировок цикла`
-      : "Персональный план тренировок не активирован";
+      : CYCLE.isPending() ? "Тренировки ожидают активации" : "Персональный план тренировок не активирован";
     const stats = `
       <div class="stats-grid">
         ${statTile({
@@ -50,7 +82,7 @@
         ${statTile({
           href: "#/workouts", route: "workouts", label: "Тренировки", iconName: "dumbbell",
           value: trainingValue, spoken: trainingSpoken, meta: trainingMeta,
-          visual: miniBars(done, total),
+          visual: miniBars(hasPlan ? done : 0, total),
         })}
         ${statTile({
           href: "#/reports", route: "reports", label: "Вес", iconName: "scale",
@@ -71,8 +103,9 @@
     return `
       <div class="screen-head">
         <span class="eyebrow"><span class="eyebrow-dot"></span>${formatLongDate(WEEK_DATES[TODAY])}</span>
-        <h1 class="home-title" id="home-title" tabindex="-1">${greetingForHour(NOW.getHours())}, <span class="home-name">${DATA.client.name}</span></h1>
+        <h1 class="home-title" id="home-title" tabindex="-1">${greetingForHour(NOW.getHours())}, <span class="home-name">${escapeHtml(App.profile.displayName())}</span></h1>
       </div>
+      ${pendingBanner()}
       ${measuresDue ? `<a class="measure-reminder" href="#/reports" data-action="open-measure-form"><span class="measure-reminder-icon">${icon("calendar")}</span><span class="measure-reminder-copy"><strong>Пора внести замеры — раз в неделю</strong><span>Так прогресс виден точнее</span></span><span class="measure-reminder-cta">Внести ${icon("chevron-right")}</span></a>` : ""}
       <div class="dash-grid">
         ${next ? trainingHero(cycleData, next, total) : planHero()}
@@ -123,16 +156,24 @@
   }
 
   function planHero() {
-    const completed = CYCLE.status() === "completed";
-    const message = completed
-      ? "Цикл завершён — отличная работа! Новый персональный план готовит Вадим."
-      : "Персональные тренировки не подключены. Пока доступны общие рекомендации.";
+    const status = SUB.status("training");
+    const expired = status === "completed" && SUB.info("training").expired;
+    const completed = status === "completed";
+    const pending = CYCLE.isPending();
+    const message = expired
+      ? "30 дней пакета закончились. Новый план и продление — у Вадима."
+      : completed
+        ? "Цикл завершён — отличная работа! Новый персональный план готовит Вадим."
+        : pending
+          ? PENDING_TEXT
+          : "Персональные тренировки не подключены. Пока доступны общие рекомендации.";
+    const tag = expired ? "Срок пакета истёк" : completed ? "Цикл завершён" : pending ? "Ожидает активации" : "Пакет не активирован";
     return `
       <article class="today-card today-card--rest card">
         <span class="hero-art" aria-hidden="true"></span>
         <div class="hero-content">
           <div class="hero-top">
-            <span class="hero-tag"><span class="eyebrow-dot"></span>${completed ? "Цикл завершён" : "Пакет не активирован"}</span>
+            <span class="hero-tag"><span class="eyebrow-dot"></span>${tag}</span>
             <span class="rest-badge" aria-hidden="true">${icon("user")}</span>
           </div>
           <h2 class="today-title">Персональный план</h2>

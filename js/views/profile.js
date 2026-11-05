@@ -4,9 +4,9 @@
   const DATA = App.data;
   const STATE = App.state;
   const CYCLE = App.cycle;
+  const SUB = App.subscription;
   const {
-    NOW, icon, escapeHtml, plural, weight, daysBetween, isoDate,
-    parseIsoDate, formatShortDateNoYear,
+    icon, escapeHtml, plural, weight, formatShortDateNoYear,
   } = App.util;
   App.views = App.views || {};
 
@@ -57,10 +57,10 @@
       <article class="identity-card card">
         <div class="identity-main">
           <span class="identity-avatar">
-            ${avatar ? `<img class="avatar-img" src="${avatar}" alt="">` : `<span class="avatar avatar--xl" aria-hidden="true">А</span>`}
+            ${avatar ? `<img class="avatar-img" src="${avatar}" alt="">` : `<span class="avatar avatar--xl" aria-hidden="true">${escapeHtml(App.profile.initial())}</span>`}
           </span>
           <div class="identity-copy">
-            <h2>${escapeHtml(DATA.client.name)}</h2>
+            <h2>${escapeHtml(App.profile.displayName())}</h2>
             <p class="identity-meta">${DATA.client.age} года · ${DATA.client.height} см · ${currentWeight} кг</p>
             <span class="goal-chip">Цель: ${escapeHtml(DATA.client.goal.toLowerCase())}</span>
           </div>
@@ -87,48 +87,93 @@
       </article>`;
   }
 
+  // Чип статуса пакета. «Срок истёк» — отдельное состояние: пакет активен по
+  // статусу, но 30 дней уже прошли, поэтому он ведёт себя как завершённый.
+  function statusChip(status, expired, completedLabel) {
+    if (expired) return { className: "chip chip--done", label: "Срок истёк" };
+    if (status === "active") return { className: "chip chip--accent", label: "Активен" };
+    if (status === "completed") return { className: "chip chip--done", label: completedLabel || "Цикл завершён" };
+    if (status === "pending") return { className: "chip chip--pending", label: "Ожидает активации" };
+    return { className: "chip chip--muted", label: "Не активирован" };
+  }
+
+  // Срок действия пакета: строка «до <дата> · осталось N дн.» у активных
+  // и короткая пометка у истёкших.
+  function termLine(info) {
+    if (info.expired) return `${info.days} ${plural(info.days, ["день", "дня", "дней"])} пакета закончились`;
+    const left = info.daysLeft;
+    return `до ${formatShortDateNoYear(info.until)} · осталось ${left} ${plural(left, ["день", "дня", "дней"])}`;
+  }
+
+  function termProgress(info, label) {
+    const used = Math.max(0, info.days - info.daysLeft);
+    return progressMarkup(used, info.days, label);
+  }
+
   function subscriptionCard() {
-    const training = DATA.subscription.training;
-    const nutrition = DATA.subscription.nutrition || { status: "none", days: 0, activatedDaysAgo: 0 };
+    const total = DATA.subscription.training.sessions;
     const cycleData = CYCLE.current();
     const done = CYCLE.doneCount(cycleData);
-    const total = training.sessions;
-    const status = CYCLE.status();
-    const trainingChip = status === "active" ? "chip chip--accent" : status === "completed" ? "chip chip--done" : "chip chip--muted";
-    const trainingLabel = status === "active" ? "Активен" : status === "completed" ? "Цикл завершён" : "Не активирован";
+    const trainingStatus = SUB.status("training");
+    const nutritionStatus = SUB.status("nutrition");
+    const trainingInfo = SUB.info("training");
+    const nutritionInfo = SUB.info("nutrition");
+    const training = statusChip(trainingStatus, trainingInfo.expired);
+    const nutrition = statusChip(nutritionStatus, nutritionInfo.expired, "Пакет завершён");
+    const allActive = trainingStatus === "active" && nutritionStatus === "active";
+    const waiting = trainingStatus === "pending" || nutritionStatus === "pending";
+
     let trainingDetail = "Пакет не активирован";
-    if (status === "active") trainingDetail = `${done} из ${total} тренировок · цикл №${cycleData.number}`;
-    if (status === "completed") trainingDetail = `${total} из ${total} тренировок · цикл завершён`;
-    const trainingProgress = status === "none" ? "" : progressMarkup(done, total, status === "active" ? `Выполнено ${done} из ${total} тренировок цикла` : "Цикл тренировок завершён");
-    const nutritionActive = nutrition.status === "active";
-    const days = Number(nutrition.days) || 0;
-    const todayIso = isoDate(NOW);
-    const activated = parseIsoDate(todayIso);
-    activated.setDate(activated.getDate() - (Number(nutrition.activatedDaysAgo) || 0));
-    const until = new Date(activated);
-    until.setDate(until.getDate() + days);
-    const untilIso = isoDate(until);
-    const remaining = Math.max(0, daysBetween(todayIso, untilIso));
-    const elapsed = Math.max(0, days - remaining);
+    let trainingTerm = "";
+    let trainingBar = "";
+    if (trainingStatus === "pending") trainingDetail = "Активация после ответа Вадима";
+    else if (trainingInfo.expired) {
+      trainingDetail = `${done} из ${total} тренировок`;
+      trainingTerm = termLine(trainingInfo);
+      trainingBar = termProgress(trainingInfo, `Использовано ${trainingInfo.days - trainingInfo.daysLeft} из ${trainingInfo.days} дней пакета тренировок`);
+    } else if (trainingStatus === "completed") {
+      trainingDetail = `${total} из ${total} тренировок · цикл завершён`;
+      trainingBar = progressMarkup(done, total, "Цикл тренировок завершён");
+    } else if (trainingStatus === "active") {
+      trainingDetail = `${done} из ${total} тренировок`;
+      trainingTerm = termLine(trainingInfo);
+      trainingBar = termProgress(trainingInfo, `Использовано ${trainingInfo.days - trainingInfo.daysLeft} из ${trainingInfo.days} дней пакета тренировок`);
+    }
+
+    let nutritionDetail = "Пакет не активирован";
+    let nutritionTerm = "";
+    let nutritionBar = "";
+    if (nutritionStatus === "pending") nutritionDetail = "Активация после ответа Вадима";
+    else if (nutritionInfo.expired) {
+      nutritionDetail = termLine(nutritionInfo);
+      nutritionBar = termProgress(nutritionInfo, `Использовано ${nutritionInfo.days} из ${nutritionInfo.days} дней пакета питания`);
+    } else if (nutritionStatus === "completed") nutritionDetail = "Пакет завершён";
+    else if (nutritionStatus === "active") {
+      nutritionDetail = termLine(nutritionInfo);
+      nutritionBar = termProgress(nutritionInfo, `Использовано ${nutritionInfo.days - nutritionInfo.daysLeft} из ${nutritionInfo.days} дней пакета питания`);
+    }
+
     return `
       <article class="subscription-card card">
-        <div class="card-head"><h2 class="card-title">Подписка</h2><span class="card-hint">${status === "active" && nutrition.status === "active" ? "активна" : "пакеты"}</span></div>
+        <div class="card-head"><h2 class="card-title">Подписка</h2><span class="card-hint">${waiting ? "ожидает активации" : allActive ? "активна" : "пакеты"}</span></div>
         <div class="subscription-rows">
           <div class="subscription-row">
             <div class="subscription-row-head">
               <span class="subscription-name">Тренировки</span>
-              <span class="${trainingChip}">${trainingLabel}</span>
+              <span class="${training.className}">${training.label}</span>
             </div>
             <p class="subscription-detail">${escapeHtml(trainingDetail)}</p>
-            ${trainingProgress}
+            ${trainingTerm ? `<p class="subscription-detail">${escapeHtml(trainingTerm)}</p>` : ""}
+            ${trainingBar}
           </div>
           <div class="subscription-row">
             <div class="subscription-row-head">
               <span class="subscription-name">Питание</span>
-              <span class="${nutritionActive ? "chip chip--accent" : "chip chip--muted"}">${nutritionActive ? "Активен" : "Не активирован"}</span>
+              <span class="${nutrition.className}">${nutrition.label}</span>
             </div>
-            ${nutritionActive ? `<p class="subscription-detail">до ${formatShortDateNoYear(untilIso)} · осталось ${remaining} ${plural(remaining, ["день", "дня", "дней"])}</p>
-            ${progressMarkup(elapsed, days, `Использовано ${elapsed} из ${days} дней пакета питания`)}` : '<p class="subscription-detail">Пакет не активирован</p>'}
+            <p class="subscription-detail">${escapeHtml(nutritionDetail)}</p>
+            ${nutritionTerm ? `<p class="subscription-detail">${escapeHtml(nutritionTerm)}</p>` : ""}
+            ${nutritionBar}
           </div>
         </div>
       </article>`;
@@ -139,26 +184,44 @@
     return `<div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${value}" aria-label="${label}"><span class="progress-fill" style="--progress:${percentValue}%"></span></div>`;
   }
 
+  function segmentedMarkup(name, labelId, label, options, current, action) {
+    return `
+        <div class="demo-setting">
+          <span class="demo-label" id="${labelId}">${label}</span>
+          <div class="segmented segmented--wrap${options.length > 3 ? " segmented--4" : ""}" role="radiogroup" aria-labelledby="${labelId}">
+            ${options.map((option) => `<label class="segment"><input type="radio" name="${name}" value="${option.value}" data-action="${action}" data-status="${option.value}"${current === option.value ? " checked" : ""}><span>${option.label}</span></label>`).join("")}
+          </div>
+        </div>`;
+  }
+
   function demoCard() {
-    const status = CYCLE.status();
-    const options = [
+    const trainingOptions = [
       { value: "active", label: "Активен" },
       { value: "completed", label: "Цикл завершён" },
+      { value: "expired", label: "Срок истёк" },
+      { value: "pending", label: "Ожидает" },
       { value: "none", label: "Не активирован" },
     ];
+    const nutritionOptions = [
+      { value: "active", label: "Активен" },
+      { value: "expired", label: "Срок истёк" },
+      { value: "pending", label: "Ожидает" },
+      { value: "none", label: "Не активирован" },
+    ];
+    const trainingStatus = STATE.training.status;
+    const nutritionStatus = STATE.nutrition ? STATE.nutrition.status : "none";
+    // «Срок истёк» — то же состояние active, поэтому сегмент выбираем по флагу.
+    const trainingCurrent = trainingStatus === "active" && SUB.info("training").expired ? "expired" : trainingStatus;
+    const nutritionCurrent = nutritionStatus === "active" && SUB.info("nutrition").expired ? "expired" : nutritionStatus;
     return `
       <article class="demo-card" data-demo="true">
         <div class="demo-head">
           <h2 class="demo-title">Только для демонстрации</h2>
           <span class="card-hint">демо</span>
         </div>
-        <p class="demo-note">Состояние пакета тренировок. На реальных данных этот блок убирается.</p>
-        <div class="demo-setting">
-          <span class="demo-label" id="demo-training-label">Тренировки</span>
-          <div class="segmented segmented--wrap" role="radiogroup" aria-labelledby="demo-training-label">
-            ${options.map((option) => `<label class="segment"><input type="radio" name="training-status" value="${option.value}" data-action="set-training-status" data-status="${option.value}"${status === option.value ? " checked" : ""}><span>${option.label}</span></label>`).join("")}
-          </div>
-        </div>
+        <p class="demo-note">Состояние пакетов. На реальных данных этот блок убирается.</p>
+        ${segmentedMarkup("training-status", "demo-training-label", "Тренировки", trainingOptions, trainingCurrent, "set-training-status")}
+        ${segmentedMarkup("nutrition-status", "demo-nutrition-label", "Питание", nutritionOptions, nutritionCurrent, "set-nutrition-status")}
         <button class="btn btn--ghost demo-reset" type="button" data-action="reset-demo" data-focus="reset-demo">Сбросить демо-данные</button>
       </article>`;
   }

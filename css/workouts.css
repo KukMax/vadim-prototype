@@ -7,7 +7,10 @@
 .chip--meta .icon{width:13px;height:13px;color:var(--muted-2);}
 .chip--accent{color:var(--on-accent);font-weight:700;background:var(--accent);border-color:var(--accent);}
 .chip--done{color:var(--accent-text);font-weight:650;background:var(--accent-soft);border-color:var(--accent-line);}
+.chip--pending{color:var(--accent-text);font-weight:650;background:transparent;border-color:var(--accent-line);border-style:dashed;}
 .chip--muted{color:var(--muted);font-weight:600;background:transparent;border-color:var(--border-strong);}
+/* Недельный ориентир под подзаголовком: мягкий индикатор, без предупреждений. */
+.pace-line{margin-top:2px;color:var(--muted);font-size:12.5px;line-height:1.4;font-variant-numeric:tabular-nums;}
 
 /* ---------- cycle strip (12 numbered sessions) ---------- */
 .session-strip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:14px;}

@@ -2,7 +2,7 @@
   "use strict";
 
   const DATA = App.data;
-  const { icon, escapeHtml, one, intFmt, percent, clamp, TODAY, DAY_SHORT, WEEK_DATES, formatLongDate } = App.util;
+  const { icon, escapeHtml, one, percent, clamp, TODAY, DAY_SHORT, WEEK_DATES, formatLongDate } = App.util;
 
   function ringMarkup(value, options = {}) {
     const size = options.size || 52;
@@ -118,6 +118,18 @@
         <p class="note-sign">Заметка к тренировке</p>
       </aside>`;
   }
+  // Общие рекомендации: аккордеон, первая карточка раскрыта.
+  function recsList(items, prefix) {
+    const cards = (items || []).map((rec, index) => `
+      <div class="rec-card${index === 0 ? " is-open" : ""}">
+        <button class="rec-toggle" type="button" data-action="toggle-rec" aria-expanded="${index === 0}" data-focus="${prefix}-${index}">
+          <span>${escapeHtml(rec.title)}</span>
+          <span class="rec-chevron" aria-hidden="true">${icon("chevron-down")}</span>
+        </button>
+        <div class="rec-body"><p>${escapeHtml(rec.text)}</p></div>
+      </div>`).join("");
+    return `<div class="recs">${cards}</div>`;
+  }
   function statTile({ href, route, label, iconName, value, spoken, meta, visual = "", quick = "" }) {
     return `
       <article class="stat-card card${quick ? " stat-card--water" : ""}">
@@ -214,5 +226,5 @@
     if (callback) callback();
   }
 
-  App.ui = { ringMarkup, animateRings, macroRows, cycleStrip, cycleMini, foodDays, coachNoteCard, statTile, miniBars, openSheet, closeSheet };
+  App.ui = { ringMarkup, animateRings, macroRows, cycleStrip, cycleMini, foodDays, coachNoteCard, recsList, statTile, miniBars, openSheet, closeSheet };
 })(window.App = window.App || {});

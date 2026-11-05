@@ -210,17 +210,20 @@
     });
   }
 
+  // Аватар в шапке и в сайдбаре: фото из профиля, иначе первая буква имени.
+  // Имя берём из App.profile: после анкеты это имя из памяти, а не демо-«А».
   function syncProfileChrome() {
     const src = STATE.profile.avatar;
+    const letter = App.profile.initial();
     const top = document.getElementById("topbar-avatar");
     if (top) {
       if (src) top.innerHTML = `<img class="avatar-img" src="${escapeHtml(src)}" alt="">`;
-      else top.textContent = "А";
+      else top.textContent = letter;
     }
     const side = document.getElementById("sidebar-avatar");
     if (side) {
       if (src) side.innerHTML = `<img class="avatar-img" src="${escapeHtml(src)}" alt="">`;
-      else side.textContent = "А";
+      else side.textContent = letter;
     }
     syncBrandLinks();
   }
@@ -576,9 +579,518 @@
       return;
     }
     verifyError("");
+    App.onboarding.reset();
     App.auth.setStage("onboarding");
     toast("Почта подтверждена");
     go("onboarding");
+  }
+
+  /* ---------- onboarding: шаги 1–3 и отправка анкеты ---------- */
+
+  // Значения шага 1 живут только в памяти: STATE.onboarding.data.
+  // Строки храним как введены (запятая в весе сохраняется), тренировки — числом.
+  const ONBOARDING_FIELDS = ["name", "phone", "sex", "height", "weight", "age", "goal", "sessionsPerWeek", "fitness", "activity", "limitations"];
+  let limitationsBackup = "";
+
+  function parseDecimal(raw) {
+    const text = String(raw == null ? "" : raw).trim().replace(/\s+/g, "").replace(",", ".");
+    if (!/^\d+(\.\d+)?$/.test(text)) return NaN;
+    return Number(text);
+  }
+
+  // Ввод не перерисовывает экран: обновляем состояние и живой текст, чтобы
+  // не терять фокус и позицию прокрутки.
+  function syncOnboardingDraft(target) {
+    const data = STATE.onboarding.data;
+    const name = target.name;
+    const field = target.closest("[data-field]");
+    if (!field || !name) return;
+    if (target.type === "range") {
+      data.sessionsPerWeek = Number(target.value);
+      const label = field.querySelector('[data-role="sessions-value"]');
+      if (label) {
+        label.textContent = `${data.sessionsPerWeek} ${plural(data.sessionsPerWeek, DATA.questionnaire.sessionsPerWeek.forms)} в неделю`;
+      }
+    } else if (target.type === "radio") {
+      if (!target.checked) return;
+      data[name] = target.value;
+    } else if (target instanceof HTMLTextAreaElement) {
+      data.limitations = target.value;
+    } else {
+      data[name] = target.value;
+    }
+    publicFieldError(target.form || target.closest("form"), name, "");
+  }
+
+  function toggleNoLimitations(button) {
+    const field = button.closest('[data-field="limitations"]');
+    if (!field) return;
+    const form = field.closest("form");
+    const textarea = field.querySelector("textarea");
+    const data = STATE.onboarding.data;
+    const pressed = button.getAttribute("aria-pressed") === "true";
+    if (pressed) {
+      button.setAttribute("aria-pressed", "false");
+      data.noLimitations = false;
+      data.limitations = limitationsBackup;
+      if (textarea) {
+        textarea.disabled = false;
+        textarea.value = limitationsBackup;
+      }
+      publicFieldError(form, "limitations", "");
+      if (textarea) textarea.focus({ preventScroll: true });
+      return;
+    }
+    limitationsBackup = data.limitations;
+    button.setAttribute("aria-pressed", "true");
+    data.noLimitations = true;
+    data.limitations = "Нет ограничений";
+    if (textarea) {
+      textarea.value = "Нет ограничений";
+      textarea.disabled = true;
+    }
+    publicFieldError(form, "limitations", "");
+  }
+
+  function clearOnboardingErrors(form) {
+    ONBOARDING_FIELDS.forEach((key) => publicFieldError(form, key, ""));
+  }
+
+  // Проверки шага 1 живут отдельно от DOM: их нужно повторить и на шагах 2–3,
+  // где форма анкеты уже не отрисована.
+  function onboardingProblems() {
+    const data = STATE.onboarding.data;
+    const L = DATA.questionnaire.limits;
+    const problems = [];
+    const add = (key, message) => problems.push([key, message]);
+
+    const name = String(data.name || "").trim();
+    if (!name) add("name", "Введите имя.");
+    else if (name.length < L.name.min) add("name", "Имя слишком короткое.");
+    else if (name.length > L.name.max) add("name", "Слишком длинное имя.");
+
+    const phone = String(data.phone || "").replace(/\D/g, "");
+    if (!phone) add("phone", "Введите телефон.");
+    else if (phone.length < L.phone.min || phone.length > L.phone.max) {
+      add("phone", `Введите телефон: ${L.phone.min}–${L.phone.max} цифр.`);
+    }
+
+    if (!data.sex) add("sex", "Выберите пол.");
+
+    const height = parseDecimal(data.height);
+    if (!String(data.height || "").trim()) add("height", "Укажите рост.");
+    else if (!isFinite(height)) add("height", "Рост указывается числом.");
+    else if (height < L.height.min || height > L.height.max) add("height", `Рост — от ${L.height.min} до ${L.height.max} см.`);
+
+    const weight = parseDecimal(data.weight);
+    if (!String(data.weight || "").trim()) add("weight", "Укажите вес.");
+    else if (!isFinite(weight)) add("weight", "Вес указывается числом.");
+    else if (weight < L.weight.min || weight > L.weight.max) add("weight", `Вес — от ${L.weight.min} до ${L.weight.max} кг.`);
+
+    const age = parseDecimal(data.age);
+    if (!String(data.age || "").trim()) add("age", "Укажите возраст.");
+    else if (!isFinite(age)) add("age", "Возраст указывается числом.");
+    else if (age < L.age.min) add("age", L.age.minMessage);
+    else if (age > L.age.max) add("age", `Возраст — до ${L.age.max} лет.`);
+
+    if (!data.goal) add("goal", "Выберите цель.");
+
+    const weeks = DATA.questionnaire.sessionsPerWeek;
+    const sessions = Number(data.sessionsPerWeek);
+    if (!isFinite(sessions) || sessions < weeks.min || sessions > weeks.max) {
+      add("sessionsPerWeek", "Выберите число тренировок в неделю.");
+    }
+
+    if (!data.fitness) add("fitness", "Выберите уровень подготовки.");
+    if (!data.activity) add("activity", "Выберите уровень активности.");
+
+    const limitations = String(data.limitations || "").trim();
+    if (!limitations && !data.noLimitations) add("limitations", "Опишите ограничения или отметьте «Нет ограничений».");
+    else if (limitations.length > L.limitations.max) add("limitations", `Не больше ${L.limitations.max} символов.`);
+
+    return problems;
+  }
+
+  function validateOnboarding(form) {
+    const problems = onboardingProblems();
+    if (!form) return !problems.length;
+    clearOnboardingErrors(form);
+    problems.forEach((item) => publicFieldError(form, item[0], item[1]));
+    if (!problems.length) return true;
+    const first = problems[0][0];
+    const invalid = form.querySelector(`.pub-field[data-field="${first}"] input, .pub-field[data-field="${first}"] textarea`);
+    if (invalid) {
+      invalid.focus({ preventScroll: true });
+      invalid.scrollIntoView({ block: "center" });
+    }
+    return false;
+  }
+
+  function showOnboardingStep(step) {
+    App.onboarding.setStep(step);
+    render("onboarding", { focusSelector: "#onboarding-title", scrollTop: true });
+  }
+
+  function nextOnboardingStep() {
+    const form = document.getElementById("onboarding-form");
+    if (form) {
+      const phoneField = form.querySelector('[data-field="phone"] input');
+      const normalized = normalizePhone(STATE.onboarding.data.phone);
+      STATE.onboarding.data.phone = normalized;
+      if (phoneField) phoneField.value = normalized;
+      if (!validateOnboarding(form)) return;
+    }
+    showOnboardingStep(App.onboarding.step() + 1);
+  }
+
+  function previousOnboardingStep() {
+    showOnboardingStep(Math.max(1, App.onboarding.step() - 1));
+  }
+
+  // Выбор пакета: карточки-радио переключают STATE.onboarding.packages,
+  // а от него зависят подпись шага, прогресс и главная кнопка.
+  function pickPackage(value) {
+    const packages = value === "both" ? ["training", "nutrition"] : value === "nutrition" ? ["nutrition"] : ["training"];
+    const current = STATE.onboarding.packages;
+    if (current.length === packages.length && current.every((item, index) => item === packages[index])) return;
+    STATE.onboarding.packages = packages;
+    // Фокус возвращаем на выбранную карточку: экран перерисовывается целиком.
+    render("onboarding", { focusSelector: 'input[name="package"]:checked' });
+  }
+
+  // Отправка анкеты: 800 мс показываем «Отправляем…», затем фиксируем снимок
+  // в памяти и открываем кабинет. Стадия "client" пишется в хранилище как раньше.
+  function submitOnboarding(trigger) {
+    if (App.onboarding.step() === 3) {
+      // На шаге 3 формы нет: проверяем продукты, блюда и аллергии.
+      if (!validateFood()) return;
+    } else {
+      const form = document.getElementById("onboarding-form");
+      if (!validateOnboarding(form)) {
+        if (!form) {
+          showOnboardingStep(1);
+          const stepOne = document.getElementById("onboarding-form");
+          if (stepOne) validateOnboarding(stepOne);
+        }
+        return;
+      }
+    }
+    if (trigger) {
+      if (trigger.dataset.busy === "true") return;
+      trigger.dataset.busy = "true";
+      trigger.disabled = true;
+      trigger.setAttribute("aria-busy", "true");
+      trigger.textContent = "Отправляем…";
+    }
+    window.setTimeout(() => {
+      App.state.submitForm();
+      go("home");
+      toast("Анкета отправлена Вадиму");
+    }, 800);
+  }
+
+  /* ---------- onboarding: шаг 3 «Предпочтения в питании» ---------- */
+
+  // Шаг 3 не перерисовывается на каждое нажатие: чипы, счётчики и живая
+  // строка обновляются точечно, чтобы не терять фокус и позицию прокрутки.
+
+  let allergiesBackup = "";
+
+  function foodSelected(key) {
+    const list = STATE.onboarding.data.foods[key];
+    return Array.isArray(list) ? list : [];
+  }
+
+  function setFoodSelected(key, titles) {
+    const foods = STATE.onboarding.data.foods;
+    if (titles.length) foods[key] = titles;
+    else delete foods[key];
+  }
+
+  function dishesPicked(group) {
+    const off = STATE.onboarding.data.dishesOff[group.key] || [];
+    return group.items.filter((title) => off.indexOf(title) === -1);
+  }
+
+  function setDishesOff(key, titles) {
+    const map = STATE.onboarding.data.dishesOff;
+    if (titles.length) map[key] = titles;
+    else delete map[key];
+  }
+
+  function foodGroup(key) {
+    return DATA.questionnaire.foodCatalog.filter((item) => item.key === key)[0] || null;
+  }
+
+  function dishGroup(key) {
+    return DATA.questionnaire.dishes.filter((item) => item.key === key)[0] || null;
+  }
+
+  function setFoodError(id, message) {
+    const error = document.getElementById(id);
+    if (!error) return;
+    error.textContent = message || "";
+    error.hidden = !message;
+  }
+
+  function syncFoodTotals() {
+    const foods = DATA.questionnaire.foodCatalog.reduce((sum, category) => sum + foodSelected(category.key).length, 0);
+    const dishes = DATA.questionnaire.dishes.reduce((sum, group) => sum + dishesPicked(group).length, 0);
+    const products = document.querySelector('[data-role="card-count-products"]');
+    if (products) products.textContent = String(foods);
+    const dishesChip = document.querySelector('[data-role="card-count-dishes"]');
+    if (dishesChip) dishesChip.textContent = String(dishes);
+    const line = document.getElementById("ob-selection");
+    if (line) line.textContent = `Выбрано продуктов: ${foods} · блюд: ${dishes}`;
+  }
+
+  function syncFoodCounters(key) {
+    const category = foodGroup(key);
+    if (!category) return;
+    const count = foodSelected(key).length;
+    const chip = document.querySelector(`[data-role="cat-count-${key}"]`);
+    if (chip) chip.textContent = `${count} из ${category.items.length}`;
+    const req = document.querySelector(`[data-req="${key}"]`);
+    if (req) req.hidden = !category.required || count > 0;
+    if (count > 0) {
+      setFoodError("onboarding-grains-error", "");
+      const box = document.querySelector(`.ob-cat-head[data-cat="${key}"]`);
+      if (box) box.closest(".ob-cat").classList.remove("is-invalid");
+    }
+    syncFoodTotals();
+  }
+
+  function syncDishCounters(key) {
+    const group = dishGroup(key);
+    if (!group) return;
+    const picked = dishesPicked(group).length;
+    const chip = document.querySelector(`[data-role="dish-count-${key}"]`);
+    if (chip) chip.textContent = `${picked} из ${group.items.length}`;
+    const req = document.querySelector(`[data-req="${key}"]`);
+    if (req) req.hidden = !group.required || picked > 0;
+    if (picked > 0) {
+      // Ошибка снимается, когда во всех обязательных группах что-то осталось.
+      const empty = DATA.questionnaire.dishes.filter((item) => item.required && !dishesPicked(item).length);
+      if (!empty.length) setFoodError("onboarding-dishes-error", "");
+      const box = document.querySelector(`.ob-cat-head[data-cat="${key}"]`);
+      if (box) box.closest(".ob-cat").classList.remove("is-invalid");
+    }
+    syncFoodTotals();
+  }
+
+  function toggleFoodChip(input) {
+    const key = input.dataset.group;
+    const list = foodSelected(key).slice();
+    const index = list.indexOf(input.value);
+    if (input.checked && index === -1) list.push(input.value);
+    if (!input.checked && index !== -1) list.splice(index, 1);
+    setFoodSelected(key, list);
+    syncFoodCounters(key);
+  }
+
+  function toggleDishChip(input) {
+    const key = input.dataset.group;
+    const off = (STATE.onboarding.data.dishesOff[key] || []).slice();
+    const index = off.indexOf(input.value);
+    if (input.checked && index !== -1) off.splice(index, 1);
+    if (!input.checked && index === -1) off.push(input.value);
+    setDishesOff(key, off);
+    syncDishCounters(key);
+  }
+
+  function toggleSnackChip(input) {
+    const data = STATE.onboarding.data;
+    const list = data.snacks.slice();
+    const index = list.indexOf(input.value);
+    if (input.checked && index === -1) list.push(input.value);
+    if (!input.checked && index !== -1) list.splice(index, 1);
+    data.snacks = list;
+  }
+
+  function setCategoryAll(key, all) {
+    const category = foodGroup(key);
+    if (!category) return;
+    setFoodSelected(key, all ? category.items.slice() : []);
+    document.querySelectorAll(`.ob-pick-input[data-role="food"][data-group="${key}"]`).forEach((input) => {
+      input.checked = all;
+    });
+    syncFoodCounters(key);
+  }
+
+  function setDishGroupAll(key, all) {
+    const group = dishGroup(key);
+    if (!group) return;
+    setDishesOff(key, all ? [] : group.items.slice());
+    document.querySelectorAll(`.ob-pick-input[data-role="dish"][data-group="${key}"]`).forEach((input) => {
+      input.checked = all;
+    });
+    syncDishCounters(key);
+  }
+
+  function changeCookDays(button) {
+    const key = button.dataset.meal;
+    const C = DATA.questionnaire.cooking;
+    const data = STATE.onboarding.data;
+    const current = data.cookDays[key] || C.value;
+    const next = Math.min(C.max, Math.max(C.min, current + Number(button.dataset.delta)));
+    if (next === current) return;
+    data.cookDays[key] = next;
+    const value = document.querySelector(`[data-role="cook-value-${key}"]`);
+    if (value) value.textContent = `${next} ${plural(next, C.forms)}`;
+    const minus = document.querySelector(`[data-action="cook-step"][data-meal="${key}"][data-delta="-1"]`);
+    const plus = document.querySelector(`[data-action="cook-step"][data-meal="${key}"][data-delta="1"]`);
+    if (minus) minus.disabled = next <= C.min;
+    if (plus) plus.disabled = next >= C.max;
+  }
+
+  function toggleCardPanel(button) {
+    const panel = document.getElementById(`ob-panel-${button.dataset.card}`);
+    if (!panel) return;
+    const open = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", open ? "false" : "true");
+    panel.hidden = open;
+  }
+
+  function toggleAccordion(button) {
+    const key = button.dataset.cat;
+    const panel = document.getElementById(`ob-cat-${key}`) || document.getElementById(`ob-dishes-${key}`);
+    if (!panel) return;
+    const open = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", open ? "false" : "true");
+    panel.hidden = open;
+  }
+
+  // Живой поиск по всем продуктам: категории без совпадений скрываются,
+  // найденные раскрываются; чипы фильтруются по названию.
+  function filterFoods(query) {
+    const text = String(query || "").trim().toLowerCase();
+    const clear = document.querySelector('[data-action="food-search-clear"]');
+    if (clear) clear.hidden = !text;
+    let matches = 0;
+    DATA.questionnaire.foodCatalog.forEach((category) => {
+      const box = document.querySelector(`.ob-cat[data-cat="${category.key}"]`);
+      const head = box && box.querySelector(".ob-cat-head");
+      const panel = document.getElementById(`ob-cat-${category.key}`);
+      if (!box || !head || !panel) return;
+      const hits = category.items.filter((title) => title.toLowerCase().indexOf(text) !== -1).length;
+      matches += hits;
+      box.hidden = Boolean(text) && !hits;
+      if (text) {
+        head.setAttribute("aria-expanded", "true");
+        panel.hidden = false;
+      } else {
+        const first = category.key === DATA.questionnaire.foodCatalog[0].key;
+        head.setAttribute("aria-expanded", first ? "true" : "false");
+        panel.hidden = !first;
+      }
+    });
+    document.querySelectorAll('.ob-pick-input[data-role="food"]').forEach((input) => {
+      const chip = input.closest(".ob-pick");
+      if (chip) chip.hidden = Boolean(text) && input.value.toLowerCase().indexOf(text) === -1;
+    });
+    const empty = document.getElementById("ob-food-empty");
+    if (empty) empty.hidden = !text || matches > 0;
+  }
+
+  function clearFoodSearch() {
+    const input = document.getElementById("ob-food-search");
+    if (input) {
+      input.value = "";
+      filterFoods("");
+      input.focus({ preventScroll: true });
+    }
+  }
+
+  function toggleNoAllergies(button) {
+    const data = STATE.onboarding.data;
+    const textarea = document.getElementById("onboarding-allergies");
+    const field = document.querySelector('.pub-field[data-field="allergies"]');
+    if (button.getAttribute("aria-pressed") === "true") {
+      button.setAttribute("aria-pressed", "false");
+      data.noAllergies = false;
+      data.allergies = allergiesBackup;
+      if (textarea) {
+        textarea.disabled = false;
+        textarea.value = allergiesBackup;
+      }
+      setFoodError("onboarding-allergies-error", "");
+      if (field) field.classList.remove("is-invalid");
+      if (textarea) textarea.focus({ preventScroll: true });
+      return;
+    }
+    allergiesBackup = data.allergies;
+    button.setAttribute("aria-pressed", "true");
+    data.noAllergies = true;
+    data.allergies = "Нет аллергий";
+    if (textarea) {
+      textarea.value = "Нет аллергий";
+      textarea.disabled = true;
+    }
+    setFoodError("onboarding-allergies-error", "");
+    if (field) field.classList.remove("is-invalid");
+    if (textarea) textarea.setAttribute("aria-invalid", "false");
+  }
+
+  // Проверки шага 3: обязательные категории продуктов, блюда и аллергии.
+  function foodProblems() {
+    const data = STATE.onboarding.data;
+    const F = DATA.questionnaire.foodErrors;
+    const problems = [];
+    DATA.questionnaire.foodCatalog.forEach((category) => {
+      if (category.required && !foodSelected(category.key).length) problems.push([`food:${category.key}`, F.grains]);
+    });
+    const emptyDishes = DATA.questionnaire.dishes.filter((group) => group.required && !dishesPicked(group).length);
+    if (emptyDishes.length) problems.push([`dish:${emptyDishes[0].key}`, F.dishes]);
+    if (!String(data.allergies || "").trim() && !data.noAllergies) problems.push(["allergies", F.allergies]);
+    return problems;
+  }
+
+  function revealFoodProblem(key) {
+    const parts = key.split(":");
+    const kind = parts[0];
+    const group = parts[1] || "";
+    const card = kind === "dish" ? "dishes" : "products";
+    const cardHead = document.querySelector(`.ob-card-head[data-card="${card}"]`);
+    const cardPanel = document.getElementById(`ob-panel-${card}`);
+    if (cardHead) cardHead.setAttribute("aria-expanded", "true");
+    if (cardPanel) cardPanel.hidden = false;
+    const head = document.querySelector(`.ob-cat-head[data-cat="${group}"]`);
+    const panel = document.getElementById(kind === "dish" ? `ob-dishes-${group}` : `ob-cat-${group}`);
+    if (head) {
+      head.setAttribute("aria-expanded", "true");
+      head.closest(".ob-cat").classList.add("is-invalid");
+    }
+    if (panel) panel.hidden = false;
+    const error = document.getElementById(kind === "dish" ? "onboarding-dishes-error" : "onboarding-grains-error");
+    if (error) error.scrollIntoView({ block: "center", behavior: "smooth" });
+    if (head) head.focus({ preventScroll: true });
+  }
+
+  function validateFood() {
+    ["onboarding-grains-error", "onboarding-dishes-error", "onboarding-allergies-error"].forEach((id) => setFoodError(id, ""));
+    document.querySelectorAll(".ob-cat.is-invalid").forEach((box) => box.classList.remove("is-invalid"));
+    const field = document.querySelector('.pub-field[data-field="allergies"]');
+    const textarea = document.getElementById("onboarding-allergies");
+    if (field) field.classList.remove("is-invalid");
+    if (textarea) textarea.setAttribute("aria-invalid", "false");
+    const problems = foodProblems();
+    if (!problems.length) return true;
+    problems.forEach((item) => {
+      if (item[0].indexOf("food:") === 0) setFoodError("onboarding-grains-error", item[1]);
+      else if (item[0].indexOf("dish:") === 0) setFoodError("onboarding-dishes-error", item[1]);
+      else setFoodError("onboarding-allergies-error", item[1]);
+    });
+    if (problems[0][0] === "allergies") {
+      if (field) field.classList.add("is-invalid");
+      if (textarea) {
+        textarea.setAttribute("aria-invalid", "true");
+        textarea.focus({ preventScroll: true });
+        textarea.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+      return false;
+    }
+    revealFoodProblem(problems[0][0]);
+    return false;
   }
 
   /* ---------- measurement form ---------- */
@@ -1076,11 +1588,28 @@
       }
       case "set-training-status": {
         const next = trigger.dataset.status;
-        if (["active", "completed", "none"].indexOf(next) === -1) return;
-        STATE.training.status = next;
+        if (["active", "completed", "pending", "none", "expired"].indexOf(next) === -1) return;
+        // «Срок истёк» — активный пакет с закончившимися 30 днями.
+        STATE.demoExpiry.training = next === "expired";
+        STATE.training.status = next === "expired" ? "active" : next;
+        // Фокус возвращаем на выбранный сегмент: панель перерисовывается целиком.
         if (currentRoute === "workouts") render("workouts", { static: true });
         else if (currentRoute === "home") render("home", { static: true });
-        else if (currentRoute === "profile") render("profile", { static: true });
+        else if (currentRoute === "profile") {
+          render("profile", { static: true, focusSelector: 'input[name="training-status"]:checked' });
+        }
+        break;
+      }
+      case "set-nutrition-status": {
+        const next = trigger.dataset.status;
+        if (["active", "completed", "pending", "none", "expired"].indexOf(next) === -1) return;
+        // DATA.subscription не трогаем: демо-статус живёт только в STATE.
+        if (!STATE.nutrition) STATE.nutrition = { status: "none" };
+        STATE.demoExpiry.nutrition = next === "expired";
+        STATE.nutrition.status = next === "expired" ? "active" : next;
+        if (currentRoute === "profile") {
+          render("profile", { static: true, focusSelector: 'input[name="nutrition-status"]:checked' });
+        } else if (currentRoute === "home") render("home", { static: true });
         break;
       }
       case "reset-demo":
@@ -1089,6 +1618,13 @@
         } catch (error) {
           /* хранилище недоступно — перезагрузка всё равно сбросит сессию */
         }
+        // Анкета живёт только в памяти, но сброс демо-данных должен вернуть
+        // чистый демо-клиент: имя, пакеты и ожидание активации тоже стираем.
+        App.onboarding.reset();
+        STATE.submission = null;
+        STATE.training.status = DATA.subscription.training.status;
+        STATE.nutrition = { status: DATA.subscription.nutrition.status };
+        STATE.demoExpiry = { training: false, nutrition: false };
         // Сброс демо-данных выводит из кабинета: ключ сессии тоже чистим.
         App.auth.reset();
         location.reload();
@@ -1200,11 +1736,47 @@
         startResend();
         toast("Код отправлен повторно");
         break;
-      case "finish-onboarding":
-        App.auth.setStage("client");
-        go("home");
+      case "onboarding-no-limits":
+        toggleNoLimitations(trigger);
+        break;
+      case "onboarding-back":
+        previousOnboardingStep();
+        break;
+      case "onboarding-next":
+        nextOnboardingStep();
+        break;
+      case "submit-onboarding":
+        submitOnboarding(trigger);
+        break;
+      case "toggle-card":
+        toggleCardPanel(trigger);
+        break;
+      case "toggle-cat":
+        toggleAccordion(trigger);
+        break;
+      case "cat-all":
+        setCategoryAll(trigger.dataset.cat, true);
+        break;
+      case "cat-none":
+        setCategoryAll(trigger.dataset.cat, false);
+        break;
+      case "dish-all":
+        setDishGroupAll(trigger.dataset.cat, true);
+        break;
+      case "dish-none":
+        setDishGroupAll(trigger.dataset.cat, false);
+        break;
+      case "cook-step":
+        changeCookDays(trigger);
+        break;
+      case "food-search-clear":
+        clearFoodSearch();
+        break;
+      case "onboarding-no-allergies":
+        toggleNoAllergies(trigger);
         break;
       case "leave-onboarding":
+        App.onboarding.reset();
         App.auth.setStage("guest");
         go("welcome");
         break;
@@ -1218,6 +1790,9 @@
         break;
       case "logout-confirm":
         // Стадия — единственное, что пишется в хранилище; введённых данных нет.
+        // Ответы анкеты живут в памяти, поэтому выход их тоже стирает.
+        App.onboarding.reset();
+        STATE.submission = null;
         App.auth.setStage("guest");
         closeSheet();
         go("welcome");
@@ -1236,11 +1811,33 @@
     if (navLink && navLink.dataset.nav === currentRoute) window.scrollTo(0, 0);
     const trigger = event.target.closest("[data-action]");
     if (!trigger) return;
+    // Радиокнопки обрабатываем по change: стрелки клавиатуры тоже меняют выбор.
+    if (trigger instanceof HTMLInputElement && trigger.type === "radio") return;
     handleAction(trigger.dataset.action, trigger, event);
   });
 
   document.addEventListener("change", (event) => {
     const target = event.target;
+    if (target instanceof HTMLInputElement && target.name === "package") {
+      pickPackage(target.value);
+      return;
+    }
+    if (target instanceof HTMLElement && target.closest('[data-form="onboarding"]')) {
+      syncOnboardingDraft(target);
+      return;
+    }
+    if (target instanceof HTMLInputElement && target.dataset.role === "food") {
+      toggleFoodChip(target);
+      return;
+    }
+    if (target instanceof HTMLInputElement && target.dataset.role === "dish") {
+      toggleDishChip(target);
+      return;
+    }
+    if (target instanceof HTMLInputElement && target.dataset.role === "snack") {
+      toggleSnackChip(target);
+      return;
+    }
     if (target instanceof HTMLInputElement && target.id === "avatar-input") {
       handleAvatar(target.files && target.files[0]);
       target.value = "";
@@ -1248,6 +1845,11 @@
     }
     if (target instanceof HTMLInputElement && target.dataset.action === "set-theme") {
       applyTheme(target.value);
+      return;
+    }
+    if (target instanceof HTMLInputElement &&
+        (target.dataset.action === "set-training-status" || target.dataset.action === "set-nutrition-status")) {
+      handleAction(target.dataset.action, target);
       return;
     }
     if (target instanceof HTMLInputElement && target.name === "consent") {
@@ -1258,6 +1860,22 @@
 
   document.addEventListener("input", (event) => {
     const target = event.target;
+    if (target instanceof HTMLElement && target.closest('[data-form="onboarding"]')) {
+      syncOnboardingDraft(target);
+      return;
+    }
+    if (target instanceof HTMLInputElement && target.id === "ob-food-search") {
+      filterFoods(target.value);
+      return;
+    }
+    if (target instanceof HTMLElement && target.id === "onboarding-allergies") {
+      STATE.onboarding.data.allergies = target.value;
+      setFoodError("onboarding-allergies-error", "");
+      const field = target.closest(".pub-field");
+      if (field) field.classList.remove("is-invalid");
+      target.setAttribute("aria-invalid", "false");
+      return;
+    }
     if (!(target instanceof HTMLInputElement)) return;
     const loginForm = target.closest('[data-form="login"]');
     if (loginForm) {
@@ -1345,6 +1963,11 @@
     if (form.dataset.form === "contacts") {
       event.preventDefault();
       saveContacts(form);
+      return;
+    }
+    if (form.dataset.form === "onboarding") {
+      event.preventDefault();
+      nextOnboardingStep();
       return;
     }
     if (form.dataset.form !== "measure") return;

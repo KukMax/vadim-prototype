@@ -20,7 +20,6 @@
 
         <div class="pub-body">
           ${UI.backLink("welcome", "Назад")}
-          ${UI.stepLabel(1, "account")}
           <h1 class="pub-title" id="register-title" tabindex="-1">Регистрация</h1>
           <p class="pub-lead">Заведите аккаунт — дальше короткая анкета и план от Вадима.</p>
 

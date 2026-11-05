@@ -173,6 +173,14 @@
 .measure-reminder-icon{display:grid;width:38px;height:38px;flex:none;place-items:center;color:var(--accent-text);background:color-mix(in srgb,var(--surface) 68%,transparent);border-radius:10px;} .measure-reminder-icon .icon{width:19px;height:19px;} .measure-reminder-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:2px;} .measure-reminder-copy strong{font-size:12.5px;font-weight:700;line-height:1.3;} .measure-reminder-copy span{color:var(--muted);font-size:11px;line-height:1.35;} .measure-reminder-cta{display:inline-flex;flex:none;align-items:center;gap:2px;color:var(--accent-text);font-size:12px;font-weight:700;} .measure-reminder-cta .icon{width:14px;height:14px;}
 .message-contact{display:inline-flex;min-height:44px;padding:0 14px;align-items:center;gap:7px;color:var(--accent-text);background:var(--surface-2);border:1px solid var(--border);border-radius:10px;font-size:12.5px;font-weight:700;} .message-contact .icon{width:15px;height:15px;}
 
+/* Pending activation: the questionnaire was sent, access is not open yet. */
+.pending-card{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;padding:16px;animation:fade-in .25s var(--ease) both;}
+.pending-icon{display:grid;width:40px;height:40px;flex:none;place-items:center;color:var(--accent-text);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:12px;} .pending-icon .icon{width:19px;height:19px;}
+.pending-body{display:flex;min-width:0;flex:1;flex-direction:column;gap:5px;}
+.pending-title{margin:0;color:var(--text);font-size:15px;font-weight:750;line-height:1.25;letter-spacing:-.02em;}
+.pending-text{margin:0;color:var(--muted);font-size:12.5px;line-height:1.5;}
+.pending-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;}
+
 /* Navigation sheets and modal dialogs. */
 .sheet-layer{position:fixed;inset:0;z-index:90;display:flex;align-items:flex-end;justify-content:center;} .sheet-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.62);opacity:0;transition:opacity .2s ease-out;} .sheet{position:relative;display:flex;width:100%;max-height:90dvh;flex-direction:column;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-bottom:0;border-radius:22px 22px 0 0;box-shadow:var(--float-shadow);outline:none;transform:translateY(102%);transition:transform .22s var(--ease);}
 .sheet-layer.is-open .sheet-backdrop{opacity:1;} .sheet-layer.is-open .sheet{transform:translateY(0);} .sheet-head{display:flex;flex:none;padding:16px 16px 12px;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);} .sheet-title{color:var(--text);font-size:18px;font-weight:800;line-height:1.2;letter-spacing:-.025em;} .sheet-close{width:44px;height:44px;flex:none;} .sheet-body{min-height:0;padding:16px 16px calc(20px + env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain;} body.is-sheet-open{overflow:hidden;}

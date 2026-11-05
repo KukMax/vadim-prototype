@@ -4,10 +4,11 @@
   const DATA = App.data;
   const STATE = App.state;
   const C = App.cycle;
+  const SUB = App.subscription;
   const {
-    icon, escapeHtml, plural, formatShortDate, formatDateRange, percent, isoDate, NOW,
+    icon, escapeHtml, plural, formatShortDate, formatDateRange, percent, isoDate, addDays, NOW,
   } = App.util;
-  const { cycleStrip } = App.ui;
+  const { cycleStrip, recsList } = App.ui;
   App.views = App.views || {};
 
   const TOTAL = DATA.cycles.current.sessions.length;
@@ -57,17 +58,34 @@
 
   /* ---------- header ---------- */
 
+  // Мягкий ориентир по темпу: сколько тренировок сделано на текущей неделе
+  // пакета. Без предупреждений и цветов — просто справка под подзаголовком.
+  function paceLine() {
+    if (SUB.status("training") !== "active" || STATE.cycle.tab !== "current") return "";
+    const info = SUB.info("training");
+    const week = Math.floor(info.since / 7) + 1;
+    const weekStart = isoDate(addDays(NOW, -(info.since % 7)));
+    const target = Number(STATE.submission && STATE.submission.sessionsPerWeek) || 3;
+    let done = 0;
+    for (let number = 1; number <= TOTAL; number += 1) {
+      if (C.isDone(C.current(), number) && C.doneDate(C.current(), number) >= weekStart) done += 1;
+    }
+    return `<p class="pace-line">Неделя ${week} · на этой неделе ${done} из ${target}</p>`;
+  }
+
   function pageHead() {
-    const status = STATE.training.status;
+    const status = SUB.status("training");
     const cycleData = C.current();
     let sub;
     if (status === "none") sub = "Пакет не активирован";
+    else if (status === "pending") sub = "Ожидает активации";
     else sub = `Цикл №${cycleData.number} · ${C.doneCount(cycleData)} из ${TOTAL} тренировок`;
     return `
       <div class="screen-head">
         <span class="eyebrow"><span class="eyebrow-dot"></span>План от Вадима</span>
         <h1 id="workouts-title" tabindex="-1">Тренировки</h1>
         <p class="screen-sub">${sub}</p>
+        ${paceLine()}
       </div>`;
   }
 
@@ -197,7 +215,7 @@
 
   function archiveCycles() {
     const list = C.archive().slice();
-    if (STATE.training.status === "completed") list.unshift(C.current());
+    if (SUB.status("training") === "completed") list.unshift(C.current());
     return list;
   }
 
@@ -270,16 +288,8 @@
   }
 
   function recsView() {
-    const cards = DATA.generalRecs.training.map((rec, index) => `
-      <div class="rec-card${index === 0 ? " is-open" : ""}">
-        <button class="rec-toggle" type="button" data-action="toggle-rec" aria-expanded="${index === 0}" data-focus="rec-${index}">
-          <span>${escapeHtml(rec.title)}</span>
-          <span class="rec-chevron" aria-hidden="true">${icon("chevron-down")}</span>
-        </button>
-        <div class="rec-body"><p>${escapeHtml(rec.text)}</p></div>
-      </div>`).join("");
     return `
-      <div class="recs">${cards}</div>
+      ${recsList(DATA.generalRecs.training, "rec")}
       <p class="recs-note">${escapeHtml(DATA.generalRecs.note)}</p>`;
   }
 
@@ -293,15 +303,24 @@
       </article>`;
   }
 
+  // Завершённый и истёкший пакет показывают один и тот же экран: архив циклов
+  // плюс общие рекомендации. Отличается только текст баннера.
   function completedView(cycleData) {
-    return `
-      ${bannerView({
+    const expired = SUB.info("training").expired;
+    const options = expired
+      ? {
+        icon: "check",
+        title: "Срок пакета истёк",
+        text: "30 дней пакета закончились. Новый цикл и продление — у Вадима.",
+        action: contactButton("plan-banner-action"),
+      }
+      : {
         icon: "check",
         title: "Цикл завершён — отличная работа!",
         text: "Новый персональный план готовит Вадим.",
         action: contactButton("plan-banner-action"),
-      })}
-      ${recsView()}`;
+      };
+    return `${bannerView(options)}${recsView()}`;
   }
 
   function noneView() {
@@ -315,15 +334,35 @@
       ${recsView()}`;
   }
 
+  // Ожидание активации показываем тем же экраном, что и «нет пакета»,
+  // но с объяснением, что происходит и когда откроется доступ.
+  function pendingView() {
+    return `
+      ${bannerView({
+        icon: "clock",
+        title: "Анкета отправлена",
+        text: "Вадим ответит в течение суток и откроет доступ. Пока доступны общие рекомендации.",
+        action: contactButton("plan-banner-action"),
+      })}
+      ${recsView()}`;
+  }
+
   /* ---------- entry ---------- */
 
+  function isWaiting() {
+    const status = SUB.status("training");
+    return status === "none" || status === "pending";
+  }
+
   function workoutsView() {
+    const status = SUB.status("training");
     let body;
-    if (STATE.training.status === "none") body = noneView();
+    if (status === "none") body = noneView();
+    else if (status === "pending") body = pendingView();
     else if (STATE.cycle.tab === "archive") body = archiveTabView();
-    else if (STATE.training.status === "completed") body = completedView(C.current());
+    else if (status === "completed") body = completedView(C.current());
     else body = currentCycleView(C.current());
-    const withTabs = STATE.training.status === "none" ? "" : tabsView();
+    const withTabs = isWaiting() ? "" : tabsView();
     return pageHead() + withTabs + body;
   }
 

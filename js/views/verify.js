@@ -27,7 +27,6 @@
         </header>
 
         <div class="pub-body">
-          ${UI.stepLabel(1, "confirm")}
           <h1 class="pub-title" id="verify-title" tabindex="-1">Подтверждение почты</h1>
           <p class="pub-lead">Мы отправили код на <b class="pub-email">${escapeHtml(email)}</b></p>
 

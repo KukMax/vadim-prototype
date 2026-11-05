@@ -3,16 +3,53 @@
 
   const DATA = App.data;
   const STATE = App.state;
+  const SUB = App.subscription;
   const {
-    NOW, TODAY, NOW_MINUTES, DAY_SHORT, WEEK_DATES, intFmt, oneFmt,
-    weightFmt, addDays, icon, escapeHtml, plural, one, num, weight, formatLongDate,
-    greetingForHour, getNextMeal, sumDishes, menuTotals, planTotals,
-    eatenTotals, eatenMealCount, waterCount, percent, clamp,
+    TODAY, DAY_SHORT, WEEK_DATES, icon, escapeHtml, one, num, formatLongDate,
+    sumDishes, planTotals, eatenTotals, eatenMealCount, waterCount, percent, clamp,
   } = App.util;
-  const { ringMarkup, macroRows, foodDays, coachNoteCard, statTile, miniBars } = App.ui;
+  const { ringMarkup, macroRows, foodDays, recsList } = App.ui;
   App.views = App.views || {};
 
+  // Пока персонального плана нет (ожидание, отказ или истёкший срок),
+  // вместо дневника показываем баннер и общие рекомендации.
+  function waitingView(status) {
+    const expired = status === "completed";
+    const title = expired
+      ? "Срок пакета истёк"
+      : status === "pending"
+        ? "Анкета отправлена"
+        : "Персональное питание не подключено";
+    const text = expired
+      ? "30 дней пакета закончились. Новый план и продление — у Вадима."
+      : status === "pending"
+        ? DATA.pendingText
+        : "Пока доступны общие рекомендации.";
+    return `
+      <article class="plan-banner card">
+        <span class="plan-banner-icon" aria-hidden="true">${icon(expired ? "check" : status === "pending" ? "clock" : "info")}</span>
+        <h2 class="plan-banner-title">${escapeHtml(title)}</h2>
+        <p class="plan-banner-copy">${escapeHtml(text)}</p>
+        <button class="btn btn--primary plan-banner-action" type="button" data-action="open-contact" data-focus="contact-coach">Связаться с Вадимом</button>
+      </article>
+      <div class="recs-block">
+        ${recsList(DATA.generalRecs.nutrition, "nutrition-rec")}
+        <p class="recs-note">${escapeHtml(DATA.generalRecs.note)}</p>
+      </div>
+      ${supplementsCard()}`;
+  }
+
   function nutritionView() {
+    const status = SUB.status("nutrition");
+    if (status !== "active") {
+      return `
+        <div class="screen-head">
+          <span class="eyebrow"><span class="eyebrow-dot"></span>Питание от Вадима</span>
+          <h1 id="nutrition-title" tabindex="-1">Питание</h1>
+          <p class="screen-sub">Общие принципы, которые работают и без персонального плана.</p>
+        </div>
+        ${waitingView(status)}`;
+    }
     const dayIndex = STATE.foodDay;
     const eaten = eatenTotals(dayIndex);
     const eatenMeals = eatenMealCount(dayIndex);
