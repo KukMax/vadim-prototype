@@ -98,10 +98,17 @@
   function getNextMeal() {
     for (let index = 0; index < DATA.mealTimes.length; index += 1) {
       if (toMinutes(DATA.mealTimes[index].time) > NOW_MINUTES) {
-        return { day: TODAY, index, label: "сегодня" };
+        return { day: planTodayIndex(), index, label: "сегодня" };
       }
     }
-    return { day: (TODAY + 1) % 7, index: 0, label: "завтра" };
+    // «Завтра» — следующий день плана: после последнего дня остаёмся на нём же.
+    const next = planTodayIndex() + 1;
+    return { day: App.plan ? Math.min(next, App.plan.LENGTH - 1) : (TODAY + 1) % 7, index: 0, label: "завтра" };
+  }
+  // День плана, который считается «сегодня»: без App.plan (демо, ранняя
+  // загрузка) остаётся текущий день недели.
+  function planTodayIndex() {
+    return App.plan ? App.plan.todayIndex() : TODAY;
   }
   function sumDishes(dishes) {
     const totals = dishes.reduce((total, dish) => ({
@@ -112,11 +119,18 @@
     totals.kcal = Math.round(totals.p * 4 + totals.f * 9 + totals.c * 4);
     return totals;
   }
-  function menuTotals(dayIndex) {
-    return DATA.menus[dayIndex].map((dishes) => sumDishes(dishes));
+  // Второй аргумент — готовое меню дня: демо передаёт DATA.menus[DAY] и живёт
+  // на семидневном шаблоне, остальные экраны берут день из App.plan.
+  function dayMenu(dayIndex, menuArg) {
+    if (menuArg) return menuArg;
+    if (App.plan) return App.plan.menu(dayIndex);
+    return DATA.menus[dayIndex] || DATA.menus[0];
   }
-  function planTotals(dayIndex) {
-    const meals = menuTotals(dayIndex);
+  function menuTotals(dayIndex, menuArg) {
+    return dayMenu(dayIndex, menuArg).map((dishes) => sumDishes(dishes));
+  }
+  function planTotals(dayIndex, menuArg) {
+    const meals = menuTotals(dayIndex, menuArg);
     const totals = meals.reduce((total, meal) => ({
       p: total.p + meal.p,
       f: total.f + meal.f,
@@ -125,10 +139,11 @@
     totals.kcal = Math.round(totals.p * 4 + totals.f * 9 + totals.c * 4);
     return totals;
   }
-  function eatenTotals(dayIndex) {
-    const meals = menuTotals(dayIndex);
+  function eatenTotals(dayIndex, menuArg) {
+    const meals = menuTotals(dayIndex, menuArg);
+    const eaten = (App.state && App.state.meals[dayIndex]) || [];
     const totals = meals.reduce((total, meal, index) => {
-      if (!App.state.meals[dayIndex][index]) return total;
+      if (!eaten[index]) return total;
       return {
         p: total.p + meal.p,
         f: total.f + meal.f,
@@ -139,10 +154,10 @@
     return totals;
   }
   function eatenMealCount(dayIndex) {
-    return App.state.meals[dayIndex].filter(Boolean).length;
+    return ((App.state && App.state.meals[dayIndex]) || []).filter(Boolean).length;
   }
   function waterCount(dayIndex) {
-    return App.state.water[dayIndex].filter(Boolean).length;
+    return ((App.state && App.state.water[dayIndex]) || []).filter(Boolean).length;
   }
   App.util = { THEME_KEY, NOW, TODAY, NOW_MINUTES, intFmt, oneFmt, weightFmt, longDateFmt,
     addDays, isoDate, parseIsoDate, daysBetween, formatShortDate, formatShortDateNoYear, formatDateRange, DAY_SHORT, WEEK_START, WEEK_DATES, toMinutes, capitalize, plural, clamp,

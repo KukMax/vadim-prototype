@@ -2,7 +2,7 @@
   "use strict";
 
   const DATA = App.data;
-  const { NOW, NOW_MINUTES, TODAY, isoDate, parseIsoDate, addDays, daysBetween, plural, clamp, toMinutes } = App.util;
+  const { NOW, NOW_MINUTES, isoDate, parseIsoDate, addDays, daysBetween, plural, clamp, toMinutes } = App.util;
   const PROFILE_KEY = "trenio-profile";
   // Хранится только стадия "guest" | "client". Почта, код и пароль — никогда.
   const SESSION_KEY = "trenio-session";
@@ -129,15 +129,34 @@
     return value;
   }
 
-  function buildState() {
+  // Дневник питания живёт по плану на 30 дней: дни до «сегодня» уже съедены
+  // и выпиты, «сегодня» заполняется по времени, будущие дни пустые. Индекс дня
+  // плана знает App.plan, но state.js грузится раньше — поэтому засев вынесен
+  // в функцию и plan.js вызывает её ещё раз, уже со своим индексом.
+  function seedFoodDays(todayIndex) {
+    const today = clamp(Number(todayIndex) || 0, 0, DATA.planDays - 1);
     const todayMeals = DATA.mealTimes.map((meal) => NOW_MINUTES >= toMinutes(meal.time));
+    return {
+      foodDay: today,
+      meals: Array.from({ length: DATA.planDays }, (_, day) => day < today
+        ? DATA.mealTimes.map(() => true)
+        : day === today ? todayMeals.slice() : DATA.mealTimes.map(() => false)),
+      water: Array.from({ length: DATA.planDays }, (_, day) => Array.from(
+        { length: DATA.targets.water },
+        (_, glass) => day < today || (day === today && glass < 5),
+      )),
+    };
+  }
+
+  function buildState() {
     const seeded = seedCycle();
     let selected = 1;
     while (seeded.done[selected] && selected < 12) selected += 1;
+    const food = seedFoodDays(App.plan ? App.plan.todayIndex() : 0);
     return {
-      foodDay: TODAY,
-      meals: Array.from({ length: 7 }, (_, day) => day < TODAY ? DATA.mealTimes.map(() => true) : day === TODAY ? todayMeals.slice() : DATA.mealTimes.map(() => false)),
-      water: Array.from({ length: 7 }, (_, day) => Array.from({ length: DATA.targets.water }, (_, glass) => day < TODAY || (day === TODAY && glass < 5))),
+      foodDay: food.foodDay,
+      meals: food.meals,
+      water: food.water,
       reportFormOpen: false,
       reportMetric: "weight",
       reportShowAll: false,
@@ -178,6 +197,14 @@
       profile: loadProfile(),
       auth: { stage: loadStage(), email: "" },
       onboarding: { mode: "signup", step: 1, data: defaultOnboardingData(), errors: {}, packages: defaultPackages() },
+      // Фильтры кабинета тренера, только в памяти: из демо-сброса и снимка
+      // анкеты исключены — это состояние прототипа панели, а не клиента.
+      coachQuery: "",
+      coachFilter: "all",
+      // Открытая карточка клиента: только id в памяти, чтобы прямая ссылка без
+      // выбранного клиента возвращала в список. Снимок анкеты и демо-сброс её не
+      // видят — это состояние просмотра панели.
+      coachClientId: null,
     };
   }
 
@@ -516,9 +543,10 @@
   // «Сбросить демо-данные» (она перезагружает страницу).
   function resetClientHistory() {
     STATE.measurements = [];
-    STATE.meals = Array.from({ length: 7 }, () => DATA.mealTimes.map(() => false));
-    STATE.water = Array.from({ length: 7 }, () => Array.from({ length: DATA.targets.water }, () => false));
-    STATE.foodDay = TODAY;
+    const food = seedFoodDays(App.plan ? App.plan.todayIndex() : 0);
+    STATE.foodDay = food.foodDay;
+    STATE.meals = food.meals;
+    STATE.water = food.water;
     STATE.cycle.done = {};
     STATE.cycle.itemDone = {};
     STATE.cycle.edits = {};
@@ -654,6 +682,8 @@
   };
 
   App.state = STATE;
+  // Повторный засев дневника: plan.js вызывает его, когда App.plan уже собран.
+  STATE.seedFoodDays = seedFoodDays;
   App.measurements = measurements;
   App.cycle = cycle;
   App.subscription = subscription;

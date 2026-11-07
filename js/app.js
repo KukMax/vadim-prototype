@@ -24,9 +24,16 @@
   // Публичный вход живёт вне кабинета: гость по умолчанию попадает на #/welcome,
   // клиент — на #/home. "verifying" и "onboarding" существуют только в памяти.
   const PUBLIC_ROUTES = ["welcome", "demo", "register", "verify", "onboarding"];
+  // Кабинет тренера — третья оболочка: доступен и гостю, и клиенту, стадию
+  // входа не меняет и в навигацию клиента не попадает.
+  const COACH_ROUTES = ["coach", "coach-client"];
 
   function isPublicRoute(route) {
     return PUBLIC_ROUTES.indexOf(route) !== -1;
+  }
+
+  function isCoachRoute(route) {
+    return COACH_ROUTES.indexOf(route) !== -1;
   }
 
   function startRoute() {
@@ -34,6 +41,10 @@
   }
 
   function guardRoute(route) {
+    // Карточка без выбранного клиента (прямая ссылка, сброс памяти) ведёт в
+    // список, а не в «Экран недоступен»: id живёт только в памяти.
+    if (route === "coach-client" && !coachClient()) return "coach";
+    if (isCoachRoute(route)) return route;
     const stage = STATE.auth.stage;
     const client = stage === "client";
     const editing = route === "onboarding" && App.onboarding.isEditing();
@@ -90,7 +101,7 @@
     const savedScrollY = window.scrollY || window.pageYOffset || 0;
     currentRoute = route;
     // Оболочка переключается до сборки вьюхи: публичные экраны рисуются без кабинета.
-    document.body.dataset.shell = isPublicRoute(route) ? "public" : "app";
+    document.body.dataset.shell = isCoachRoute(route) ? "coach" : isPublicRoute(route) ? "public" : "app";
     let html;
     try {
       html = view.view();
@@ -116,6 +127,7 @@
     }
     document.title = PAGE_TITLES[route] || "Trenio";
     document.body.dataset.route = route;
+    if (route === "nutrition") revealFoodDay();
     syncNavigation(route);
     syncClientMeta();
     syncProfileChrome();
@@ -179,7 +191,7 @@
   /* ---------- chrome ---------- */
 
   function syncNavigation(route) {
-    if (isPublicRoute(route)) {
+    if (isPublicRoute(route) || isCoachRoute(route)) {
       document.querySelectorAll(".nav-link[data-nav], .tab[data-nav]").forEach((link) => {
         link.removeAttribute("aria-current");
       });
@@ -236,6 +248,22 @@
     if (!key) return;
     const target = document.querySelector('[data-focus="' + String(key).replace(/"/g, '\\"') + '"]');
     if (target) target.focus({ preventScroll: true });
+  }
+
+  // Лента дней плана длиннее экрана: выбранный чип подкручиваем в видимую
+  // область без анимации, только если он вышел за край ленты.
+  function revealFoodDay() {
+    const strip = document.querySelector(".food-days");
+    if (!strip) return;
+    const chip = strip.querySelector('.food-day[aria-pressed="true"]');
+    if (!chip) return;
+    const left = chip.offsetLeft;
+    const right = left + chip.offsetWidth;
+    const visibleLeft = strip.scrollLeft;
+    const visibleRight = visibleLeft + strip.clientWidth;
+    if (left < visibleLeft || right > visibleRight) {
+      chip.scrollIntoView({ block: "nearest", inline: "center", behavior: "auto" });
+    }
   }
 
   function toast(message) {
@@ -909,6 +937,8 @@
       }
     }
     if (!App.onboarding.saveEdit()) return;
+    // Новая анкета меняет норму калорий, а с ней и масштаб порций плана.
+    if (App.plan) App.plan.invalidate();
     go("questionnaire");
     toast("Анкета обновлена");
   }
@@ -1390,11 +1420,26 @@
     });
   }
 
+  // Индекс дня плана: всё, что приходит из data-атрибутов, приводим к 0..LENGTH-1,
+  // чтобы правка не улетела за пределы тридцати дней.
+  function planDay(value, fallback) {
+    const length = App.plan ? App.plan.LENGTH : DATA.planDays;
+    const index = Math.floor(Number(value));
+    if (!Number.isFinite(index)) return typeof fallback === "number" ? fallback : 0;
+    return Math.min(Math.max(0, index), length - 1);
+  }
+
   // Рецепт берётся из каталога, а граммы, калории и макросы — из самого блюда:
-  // в js/recipes.js чисел нет, чтобы они не разошлись с меню.
+  // в js/recipes.js чисел нет, чтобы они не разошлись с меню. План масштабирует
+  // граммы, поэтому сначала ищем блюдо в плане, а демо-кабинету оставляем
+  // шаблоны как есть.
   function findDish(dayIndex, name) {
-    const days = [DATA.menus[dayIndex], DATA.menus[STATE.foodDay]].concat(DATA.menus);
-    for (const day of days) {
+    const days = [];
+    if (currentRoute !== "demo" && App.plan) {
+      days.push(App.plan.menu(dayIndex), App.plan.menu(STATE.foodDay));
+      for (let index = 0; index < App.plan.LENGTH; index += 1) days.push(App.plan.menu(index));
+    }
+    for (const day of days.concat(DATA.menus)) {
       if (!day) continue;
       for (const dishes of day) {
         const dish = dishes.find((item) => item.n === name);
@@ -1421,8 +1466,16 @@
       });
       return;
     }
+    // Состав каталога — на базовую порцию, а в плане граммы масштабированы:
+    // множитель держит строки состава в согласии с итогом «≈ N г» над списком.
+    const base = entry.ingredients.reduce((total, item) => total + item.g, 0);
+    const factor = target && base > 0 ? target.g / base : 1;
+    const ingredientGrams = (value) => {
+      const scaled = value * factor;
+      return scaled >= 25 ? Math.round(scaled / 5) * 5 : Math.max(1, Math.round(scaled));
+    };
     const ingredients = entry.ingredients.map((item) => `
-      <div class="recipe-row"><span>${escapeHtml(item.n)}</span><span>${num(item.g)} г</span></div>`).join("");
+      <div class="recipe-row"><span>${escapeHtml(item.n)}</span><span>${num(ingredientGrams(item.g))} г</span></div>`).join("");
     const steps = entry.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("");
     openSheet({
       title: "Рецепт",
@@ -1696,6 +1749,44 @@
     toast("Фото удалено");
   }
 
+  /* ---------- кабинет тренера ---------- */
+
+  // Поиск и фильтр — состояние прототипа в памяти. Перерисовка статичная:
+  // анимации не перезапускаются, фокус возвращается на тот же элемент.
+  function applyCoachQuery(value) {
+    STATE.coachQuery = String(value || "");
+    render("coach", { static: true, focusKey: "coach-search" });
+    const input = document.querySelector("[data-coach-search]");
+    if (!input) return;
+    const end = input.value.length;
+    try {
+      input.setSelectionRange(end, end);
+    } catch (error) {
+      return;
+    }
+  }
+
+  function setCoachFilter(key) {
+    const known = App.coach.filters.some((filter) => filter.key === key);
+    if (!known) return;
+    STATE.coachFilter = key;
+    render("coach", { static: true, focusKey: "coach-filter-" + key });
+  }
+
+  // Выбранный клиент — только в памяти: id не попадает в URL, storage или
+  // снимок анкеты. Тренерская карточка читает исключительно фикстуры.
+  function coachClient() {
+    const id = STATE.coachClientId;
+    return id ? App.coach.find(id) : null;
+  }
+
+  function openCoachClient(id) {
+    const client = App.coach.find(id);
+    if (!client) return;
+    STATE.coachClientId = client.id;
+    go("coach-client");
+  }
+
   /* ---------- actions ---------- */
 
   function handleAction(action, trigger, event) {
@@ -1704,7 +1795,7 @@
         closeSheet();
         break;
       case "add-water": {
-        const day = Number(trigger.dataset.day);
+        const day = planDay(trigger.dataset.day, STATE.foodDay);
         const slots = STATE.water[day];
         if (!slots) return;
         const index = slots.findIndex((value) => !value);
@@ -1717,7 +1808,7 @@
         break;
       }
       case "toggle-water": {
-        const day = Number(trigger.dataset.day);
+        const day = planDay(trigger.dataset.day, STATE.foodDay);
         const index = Number(trigger.dataset.index);
         const slots = STATE.water[day];
         if (!slots || typeof slots[index] !== "boolean") return;
@@ -1726,7 +1817,7 @@
         break;
       }
       case "toggle-meal": {
-        const day = Number(trigger.dataset.day);
+        const day = planDay(trigger.dataset.day, STATE.foodDay);
         const index = Number(trigger.dataset.index);
         const meals = STATE.meals[day];
         if (!meals || typeof meals[index] !== "boolean") return;
@@ -1866,8 +1957,7 @@
         location.reload();
         break;
       case "pick-food-day": {
-        const day = Number(trigger.dataset.day);
-        if (!DATA.menus[day]) return;
+        const day = planDay(trigger.dataset.day, STATE.foodDay);
         STATE.foodDay = day;
         render("nutrition", { static: true, focusKey: trigger.dataset.focus });
         break;
@@ -1986,8 +2076,17 @@
             </div>`,
         });
         break;
-      case "coach-soon":
-        toast("Кабинет тренера появится в следующей версии");
+      case "open-coach":
+        go("coach");
+        break;
+      case "exit-coach":
+        go(startRoute());
+        break;
+      case "coach-filter":
+        setCoachFilter(trigger.dataset.filter);
+        break;
+      case "open-coach-client":
+        openCoachClient(trigger.dataset.client);
         break;
       case "legal":
         legalSheet(trigger.dataset.legal);
@@ -2140,6 +2239,10 @@
     }
     if (target instanceof HTMLInputElement && target.id === "ob-food-search") {
       filterFoods(target.value);
+      return;
+    }
+    if (target instanceof HTMLInputElement && target.hasAttribute("data-coach-search")) {
+      applyCoachQuery(target.value);
       return;
     }
     if (target instanceof HTMLElement && target.id === "onboarding-allergies") {

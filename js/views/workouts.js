@@ -230,7 +230,7 @@
         </div>
         <div class="set-table${editable ? "" : " set-table--static"}">
           <div class="set-table-head" aria-hidden="true">
-            <span>Подход</span><span>${escapeHtml(repsCaption(item))}</span><span>Вес (кг)</span>${editable ? "<span></span>" : ""}
+            <span></span><span>${escapeHtml(repsCaption(item))}</span><span>Вес (кг)</span>${editable ? "<span></span>" : ""}
           </div>
           ${rows}
         </div>

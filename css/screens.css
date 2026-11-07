@@ -67,9 +67,9 @@
 .note-text{margin-top:12px;color:var(--text);font-size:12.5px;line-height:1.6;} .note-sign{margin-top:10px;color:var(--muted);font-size:10.5px;}
 .finish-dock{position:fixed;bottom:calc(80px + env(safe-area-inset-bottom));left:50%;z-index:46;width:min(520px,calc(100% - 32px));padding:8px;background:var(--surface);border:1px solid var(--border-strong);border-radius:16px;box-shadow:var(--float-shadow);transform:translateX(-50%);}
 .finish-dock .btn{width:100%;min-height:48px;} .dock-spacer{height:84px;} body.has-dock .page{padding-bottom:calc(170px + env(safe-area-inset-bottom));} .day-picker{padding:8px;margin-bottom:12px;}
-.food-days{display:grid;grid-template-columns:repeat(7,minmax(44px,1fr));gap:3px;}
-.food-day{position:relative;display:flex;min-width:0;min-height:58px;padding:7px 2px 6px;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--text);border:1px solid transparent;border-radius:var(--radius-sm);transition:color .2s ease-out,background-color .2s ease-out,border-color .2s ease-out;}
-.food-day .food-day-name{color:var(--muted);font-size:10px;font-weight:650;line-height:1.2;} .food-day .food-day-date{color:var(--text);font-size:15px;font-weight:750;line-height:1.2;letter-spacing:-.02em;}
+.food-days{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;scroll-snap-type:x proximity;scrollbar-width:thin;}
+.food-day{position:relative;display:flex;min-width:48px;flex:0 0 auto;min-height:58px;padding:7px 6px 6px;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--text);border:1px solid transparent;border-radius:var(--radius-sm);scroll-snap-align:start;transition:color .2s ease-out,background-color .2s ease-out,border-color .2s ease-out;}
+.food-day .food-day-name{display:inline-flex;align-items:center;gap:3px;color:var(--muted);font-size:10px;font-weight:650;line-height:1.2;} .food-day .food-day-date{color:var(--text);font-size:15px;font-weight:750;line-height:1.2;letter-spacing:-.02em;} .food-day .food-day-dot{width:4px;height:4px;flex:none;background:var(--accent);border-radius:50%;}
 .food-day.is-today .food-day-name{color:var(--accent-text);} .food-day[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-line);}
 .food-day[aria-pressed="true"] .food-day-name,.food-day[aria-pressed="true"] .food-day-date{color:var(--accent-text);} .food-day:hover{background:var(--surface-2);} .food-day:active{transform:scale(.97);}
 .food-day[aria-pressed="true"]:hover{background:var(--accent-soft);} .nutrition-layout{display:grid;gap:14px;} .nutrition-main,.nutrition-side{display:flex;min-width:0;flex-direction:column;gap:12px;} .target-card{padding:18px;}
@@ -158,7 +158,7 @@
   body.has-dock .app-footer{padding-bottom:16px;} .dock-spacer{height:24px;} body.has-dock .page{padding-bottom:118px;}
 }
 @media (max-width:389px){
-  .food-days{grid-template-columns:repeat(4,minmax(44px,1fr));}
+  .food-days{gap:3px;}
 }
 @media (max-width:359px){
   .page{padding-right:12px;padding-left:12px;} .topbar-inner{padding-right:12px;padding-left:12px;} .brand-name{font-size:21px;} .today-card{padding:17px;} .today-title{font-size:24px;} .stats-grid{gap:8px;} .stat-link{padding:12px;}

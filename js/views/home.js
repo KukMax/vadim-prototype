@@ -107,11 +107,14 @@
     const trainingStatus = SUB.status("training");
     const nutritionActive = SUB.status("nutrition") === "active";
     const hasPlan = CYCLE.hasPlan();
+    // День дневника питания — день плана (0..29), а не день недели: индекс
+    // плана и WEEK_DATES больше не совпадают.
+    const foodDayIndex = App.plan ? App.plan.todayIndex() : TODAY;
     const done = CYCLE.doneCount(cycleData);
     // Истёкший пакет ведёт себя как завершённый: открывать тренировку нельзя.
     const next = trainingStatus === "active" ? CYCLE.nextSession(cycleData) : null;
-    const eaten = eatenTotals(TODAY);
-    const water = waterCount(TODAY);
+    const eaten = eatenTotals(foodDayIndex);
+    const water = waterCount(foodDayIndex);
     const latestMeasure = App.measurements.latest();
     const submission = STATE.submission;
     // Без замеров вес берём из анкеты, а если и её нет — прочерк: чужих цифр
@@ -146,7 +149,7 @@
           href: "#/nutrition", route: "nutrition", label: "Вода", iconName: "drop",
           value: `${water} <span class="stat-divider">/</span> ${DATA.targets.water}`,
           spoken: `${water} из ${DATA.targets.water} стаканов`, meta: "стаканов",
-          quick: `<button class="stat-quick" type="button" data-action="add-water" data-day="${TODAY}" data-focus="water-add" aria-disabled="${waterFull}" aria-label="${waterFull ? "Норма воды на сегодня выполнена" : "Добавить стакан воды"}">${icon(waterFull ? "check" : "plus")}</button>`,
+          quick: `<button class="stat-quick" type="button" data-action="add-water" data-day="${foodDayIndex}" data-focus="water-add" aria-disabled="${waterFull}" aria-label="${waterFull ? "Норма воды на сегодня выполнена" : "Добавить стакан воды"}">${icon(waterFull ? "check" : "plus")}</button>`,
         })}` : "";
     const stats = `
       <div class="stats-grid">
@@ -183,7 +186,7 @@
     const sideCards = `${STATE.submission ? "" : messageCard()}${nutritionActive ? nextMealCard() : ""}`;
     return `
       <div class="screen-head">
-        <span class="eyebrow"><span class="eyebrow-dot"></span>${formatLongDate(WEEK_DATES[TODAY])}</span>
+        <span class="eyebrow"><span class="eyebrow-dot"></span>${formatLongDate(App.plan ? App.plan.dateOf(foodDayIndex) : WEEK_DATES[TODAY])}</span>
         <h1 class="home-title" id="home-title" tabindex="-1">${greetingForHour(NOW.getHours())}, <span class="home-name">${escapeHtml(App.profile.displayName())}</span></h1>
       </div>
       ${pendingBanner()}
@@ -348,7 +351,9 @@
   function nextMealCard() {
     const next = getNextMeal();
     const meal = DATA.mealTimes[next.index];
-    const dish = DATA.menus[next.day][next.index][0];
+    const dishes = App.plan ? App.plan.menu(next.day)[next.index] : DATA.menus[next.day % DATA.menus.length][next.index];
+    const dish = dishes && dishes[0];
+    if (!dish) return "";
     return `
       <a class="next-meal-card card" href="#/nutrition" data-nav="nutrition" aria-label="Следующий приём пищи: ${next.label}, ${meal.time}, ${meal.name} — ${dish.n}. Открыть питание">
         <span class="next-meal-time"><strong>${meal.time}</strong><span>${next.label}</span></span>

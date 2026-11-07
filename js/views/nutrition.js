@@ -6,7 +6,7 @@
   const SUB = App.subscription;
   const CALORIES = App.calories;
   const {
-    TODAY, DAY_SHORT, WEEK_DATES, icon, escapeHtml, one, num, formatLongDate,
+    TODAY, DAY_SHORT, WEEK_DATES, icon, escapeHtml, one, num, formatLongDate, formatDateRange,
     sumDishes, planTotals, eatenTotals, eatenMealCount, waterCount, percent, clamp,
   } = App.util;
   const { ringMarkup, macroRows, foodDays, recsList } = App.ui;
@@ -52,19 +52,21 @@
         </div>
         ${waitingView(status)}`;
     }
-    const dayIndex = STATE.foodDay;
+    const planLength = App.plan ? App.plan.LENGTH : DATA.planDays;
+    const planToday = App.plan ? App.plan.todayIndex() : TODAY;
+    const dayIndex = clamp(STATE.foodDay, 0, planLength - 1);
     const eaten = eatenTotals(dayIndex);
     const eatenMeals = eatenMealCount(dayIndex);
     const calorieTarget = CALORIES.target();
     const caloriePercent = percent(eaten.kcal, calorieTarget);
     const remaining = calorieTarget - eaten.kcal;
-    const dateLabel = formatLongDate(WEEK_DATES[dayIndex]);
+    const dateLabel = formatLongDate(App.plan ? App.plan.dateOf(dayIndex) : WEEK_DATES[dayIndex % WEEK_DATES.length]);
     const water = waterCount(dayIndex);
     return `
       <div class="screen-head">
         <span class="eyebrow"><span class="eyebrow-dot"></span>Дневник питания</span>
         <h1 id="nutrition-title" tabindex="-1">Питание</h1>
-        <p class="screen-sub">${dateLabel}${dayIndex === TODAY ? " · сегодня" : ""}. Норма и меню уже собраны тренером.</p>
+        <p class="screen-sub">${dateLabel}${dayIndex === planToday ? " · сегодня" : ""}. План на ${planLength} дней, день ${dayIndex + 1} из ${planLength}.</p>
       </div>
       <div class="day-picker card">
         ${foodDays(dayIndex)}
@@ -86,7 +88,7 @@
           <div class="meal-section">
             <div class="meal-section-head"><h2>Приёмы пищи</h2><span>${eatenMeals} из ${DATA.mealTimes.length} отмечено</span></div>
             <div class="meal-list">
-              ${DATA.menus[dayIndex].map((dishes, mealIndex) => mealCard(dayIndex, mealIndex, dishes)).join("")}
+              ${(App.plan ? App.plan.menu(dayIndex) : DATA.menus[dayIndex % DATA.menus.length]).map((dishes, mealIndex) => mealCard(dayIndex, mealIndex, dishes)).join("")}
             </div>
           </div>
         </div>
@@ -101,7 +103,7 @@
             </div>
             <div class="water-glasses" role="group" aria-label="Отметить выпитые стаканы воды">
               ${Array.from({ length: DATA.targets.water }, (_, glassIndex) => {
-                const filled = STATE.water[dayIndex][glassIndex];
+                const filled = (STATE.water[dayIndex] || [])[glassIndex];
                 return `<button class="glass-button" type="button" data-action="toggle-water" data-day="${dayIndex}" data-index="${glassIndex}" data-focus="water-${dayIndex}-${glassIndex}" aria-pressed="${filled}" aria-label="Стакан ${glassIndex + 1} из ${DATA.targets.water}">${icon("glass")}</button>`;
               }).join("")}
             </div>
@@ -118,8 +120,9 @@
   // название и граммы уходят в разметку кнопки, а не считаются заново.
   function mealCard(dayIndex, mealIndex, dishes, readOnly) {
     const meal = DATA.mealTimes[mealIndex];
-    const totals = sumDishes(dishes);
-    const eaten = !readOnly && STATE.meals[dayIndex][mealIndex];
+    const items = dishes || [];
+    const totals = sumDishes(items);
+    const eaten = !readOnly && (STATE.meals[dayIndex] || [])[mealIndex];
     return `
       <article class="meal-card card${eaten ? " is-eaten" : ""}">
         <div class="meal-head">
@@ -127,7 +130,7 @@
           <div class="meal-kcal"><span class="meal-kcal-label">Итого</span>${num(totals.kcal)} <span>ккал</span></div>
         </div>
         <ul class="dishes">
-          ${dishes.map((dish) => `
+          ${items.map((dish) => `
             <li class="dish-item">
               <button class="dish" type="button" data-action="open-recipe" data-dish="${escapeHtml(dish.n)}" data-day="${dayIndex}" aria-label="Рецепт: ${escapeHtml(dish.n)}, ${dish.g} г">
                 <span class="dish-main"><span class="dish-name">${escapeHtml(dish.n)}</span><span class="dish-kcal">${num(dish.k)} ккал</span></span>
@@ -144,37 +147,51 @@
         </div>
       </article>`;
   }
+  // Окно недели внутри плана: 30 дней в график не влезают, поэтому показываем
+  // семь дней той недели плана, в которую попадает выбранный день.
+  function weekIndices(dayIndex) {
+    const length = App.plan ? App.plan.LENGTH : DAY_SHORT.length;
+    const start = clamp(Math.floor(dayIndex / 7) * 7, 0, Math.max(0, length - 1));
+    return Array.from({ length: Math.min(7, length - start) }, (_, offset) => start + offset);
+  }
   function weekCaloriesCard(selected) {
     const calorieMax = 2350;
     const calorieTarget = CALORIES.target();
     const targetLine = clamp((calorieTarget / calorieMax) * 100, 0, 100);
-    const days = DAY_SHORT.map((label, index) => {
+    const planToday = App.plan ? App.plan.todayIndex() : TODAY;
+    const dateOf = (index) => (App.plan ? App.plan.dateOf(index) : WEEK_DATES[index % WEEK_DATES.length]);
+    const labelOf = (index) => DAY_SHORT[(dateOf(index).getDay() + 6) % 7];
+    const indices = weekIndices(selected);
+    const days = indices.map((index) => {
       const eaten = eatenTotals(index).kcal;
       const plan = planTotals(index).kcal;
       return {
-        label,
+        index,
         eaten,
         plan,
         height: clamp((eaten / calorieMax) * 100, 0, 100),
         planLine: clamp((plan / calorieMax) * 100, 0, 100),
       };
     });
-    const a11y = days.map((day) => `${day.label}: ${num(day.eaten)}`).join(", ");
+    const a11y = days.map((day) => `${labelOf(day.index)}: ${num(day.eaten)}`).join(", ");
+    const rangeLabel = indices.length
+      ? formatDateRange(dateOf(indices[0]), dateOf(indices[indices.length - 1]))
+      : "";
     return `
       <article class="week-chart-card card">
-        <div class="card-head"><h2 class="card-title">Калории за неделю</h2><span class="card-hint">цель ${num(calorieTarget)}</span></div>
+        <div class="card-head"><h2 class="card-title">Калории за неделю</h2><span class="card-hint">${rangeLabel}</span></div>
         <div class="week-chart" role="img" aria-label="Съедено калорий: ${a11y}. Цель ${num(calorieTarget)} калорий.">
           <div class="chart-target-line" style="--target-line:${targetLine}%"><span>${num(calorieTarget)}</span></div>
           <div class="week-bars">
-            ${days.map((day, index) => `
-              <div class="week-col${index === selected ? " is-selected" : ""}${index === TODAY ? " is-today" : ""}">
+            ${days.map((day) => `
+              <div class="week-col${day.index === selected ? " is-selected" : ""}${day.index === planToday ? " is-today" : ""}">
                 <span class="plan-tick" style="--plan-line:${day.planLine}%"></span>
                 <span class="week-bar-fill" style="--bar-h:${Math.max(day.height, day.eaten > 0 ? 2 : 0)}%"></span>
               </div>`).join("")}
           </div>
         </div>
         <div class="week-axis" aria-hidden="true">
-          ${DAY_SHORT.map((label, index) => `<span class="${index === selected ? "is-accent" : ""}">${label}</span>`).join("")}
+          ${days.map((day) => `<span class="${day.index === selected ? "is-accent" : ""}">${labelOf(day.index)}</span>`).join("")}
         </div>
         <div class="chart-legend" aria-hidden="true">
           <span><i class="legend-dot"></i>съедено</span>

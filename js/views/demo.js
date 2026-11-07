@@ -18,7 +18,9 @@
   const DAY = 0;
 
   function nutritionCard() {
-    const plan = planTotals(DAY);
+    // Демо живёт на семи шаблонах: передаём меню дня явно, иначе ячейка
+    // посчитает масштабированный день плана.
+    const plan = planTotals(DAY, DATA.menus[DAY]);
     const target = DATA.targets;
     const macros = [
       ["Белки", plan.p, target.protein],

@@ -90,21 +90,27 @@
         }).join("")}
       </div>`;
   }
+  // Полоса дней плана: 30 дней не влезают в экран, поэтому лента прокручивается
+  // по горизонтали, а подпись дня — реальная дата плана. Демо-кабинет живёт на
+  // семи шаблонах и своей полосы не имеет.
   function foodDays(selected) {
+    const length = App.plan ? App.plan.LENGTH : DAY_SHORT.length;
+    const todayIndex = App.plan ? App.plan.todayIndex() : TODAY;
+    const chips = Array.from({ length }, (_, index) => {
+      const date = App.plan ? App.plan.dateOf(index) : WEEK_DATES[index % WEEK_DATES.length];
+      const weekday = DAY_SHORT[(date.getDay() + 6) % 7];
+      const isToday = index === todayIndex;
+      return `
+        <button class="food-day${isToday ? " is-today" : ""}" type="button"
+          data-action="pick-food-day" data-day="${index}" data-focus="food-day-${index}"
+          aria-pressed="${selected === index}" aria-label="День ${index + 1} из ${length}, ${formatLongDate(date)}${isToday ? ", сегодня" : ""}">
+          <span class="food-day-name">${weekday}${isToday ? '<i class="food-day-dot" aria-hidden="true"></i>' : ""}</span>
+          <span class="food-day-date">${date.getDate()}</span>
+        </button>`;
+    });
     return `
       <div class="food-days" role="group" aria-label="Выбор дня меню">
-        ${DAY_SHORT.map((label, index) => {
-          const date = WEEK_DATES[index];
-          const isToday = index === TODAY;
-          const pressed = selected === index;
-          return `
-            <button class="food-day${isToday ? " is-today" : ""}" type="button"
-              data-action="pick-food-day" data-day="${index}" data-focus="food-day-${index}"
-              aria-pressed="${pressed}" aria-label="${formatLongDate(date)}${isToday ? ", сегодня" : ""}">
-              <span class="food-day-name">${label}</span>
-              <span class="food-day-date">${date.getDate()}</span>
-            </button>`;
-        }).join("")}
+        ${chips.join("")}
       </div>`;
   }
   function coachNoteCard(text) {

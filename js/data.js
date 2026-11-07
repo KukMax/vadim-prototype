@@ -12,6 +12,8 @@
     // Телефон тренера вымышленный: демо-прототип, реальные контакты не нужны.
     coach: { name: "Вадим", phone: "+76664719620", phoneDisplay: "+7 666 471-96-20", telegramUrl: "https://t.me/Vadim_Bezrukavyi", telegramHandle: "@Vadim_Bezrukavyi" },
     targets: { kcal: 2100, protein: 160, fat: 65, carbs: 220, water: 8 },
+    // Длина плана питания в днях. Меню-шаблонов 7, план собирается из них.
+    planDays: 30,
     goal: {
       title: "Снизить вес",
       start: 92, current: 86.4, target: 80,
@@ -95,7 +97,10 @@
     },
   };
   const DAY_SHORT = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-  const ROUTES = ["welcome", "demo", "register", "verify", "onboarding", "home", "workouts", "nutrition", "reports", "profile", "questionnaire"];
+  // "coach" и "coach-client" — кабинет тренера: отдельная оболочка, в сайдбар
+  // и таб-бар не входит. Карточка клиента — отдельный экран с тем же шеллом,
+  // чтобы работали «назад» браузера и прямая ссылка.
+  const ROUTES = ["welcome", "demo", "register", "verify", "onboarding", "home", "workouts", "nutrition", "reports", "profile", "questionnaire", "coach", "coach-client"];
   const PAGE_TITLES = {
     welcome: "Вход — Trenio",
     demo: "Демо-кабинет — Trenio",
@@ -108,6 +113,8 @@
     reports: "Отчёты — Trenio",
     profile: "Профиль — Trenio",
     questionnaire: "Моя анкета — Trenio",
+    coach: "Клиенты — кабинет тренера",
+    "coach-client": "Клиент — кабинет тренера",
   };
   const SCREEN_IDS = {
     welcome: "screen-welcome",
@@ -121,6 +128,8 @@
     reports: "screen-reports",
     profile: "screen-profile",
     questionnaire: "screen-questionnaire",
+    coach: "screen-coach",
+    "coach-client": "screen-coach-client",
   };
 
   const pad = (value) => String(value).padStart(2, "0");

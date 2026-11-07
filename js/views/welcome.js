@@ -46,7 +46,7 @@
       </a>
 
       <div class="pub-tail">
-        <button class="link-btn" type="button" data-action="coach-soon">Я тренер</button>
+        <button class="link-btn" type="button" data-action="open-coach">Я тренер</button>
         <button class="pub-shortcut" type="button" data-action="demo-client" data-demo="true">Войти как демо-клиент (для показа)</button>
       </div>
 
