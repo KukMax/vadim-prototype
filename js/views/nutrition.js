@@ -114,6 +114,8 @@
       </div>`;
   }
   // readOnly используется демо-кабинетом: без отметок «Съел» и без прогресса.
+  // Строка блюда — кнопка: по нажатию открывается лист с рецептом, поэтому
+  // название и граммы уходят в разметку кнопки, а не считаются заново.
   function mealCard(dayIndex, mealIndex, dishes, readOnly) {
     const meal = DATA.mealTimes[mealIndex];
     const totals = sumDishes(dishes);
@@ -126,9 +128,12 @@
         </div>
         <ul class="dishes">
           ${dishes.map((dish) => `
-            <li class="dish">
-              <div class="dish-main"><span class="dish-name">${escapeHtml(dish.n)}</span><span class="dish-kcal">${num(dish.k)} ккал</span></div>
-              <div class="dish-meta"><span class="dish-grams">${dish.g} г</span><span class="dish-sep"></span><span>Б ${one(dish.p)}</span><span class="dish-sep"></span><span>Ж ${one(dish.f)}</span><span class="dish-sep"></span><span>У ${one(dish.c)}</span></div>
+            <li class="dish-item">
+              <button class="dish" type="button" data-action="open-recipe" data-dish="${escapeHtml(dish.n)}" data-day="${dayIndex}" aria-label="Рецепт: ${escapeHtml(dish.n)}, ${dish.g} г">
+                <span class="dish-main"><span class="dish-name">${escapeHtml(dish.n)}</span><span class="dish-kcal">${num(dish.k)} ккал</span></span>
+                <span class="dish-meta"><span class="dish-grams">${dish.g} г</span><span class="dish-sep"></span><span>Б ${one(dish.p)}</span><span class="dish-sep"></span><span>Ж ${one(dish.f)}</span><span class="dish-sep"></span><span>У ${one(dish.c)}</span></span>
+                ${icon("chevron-right", "dish-chevron")}
+              </button>
             </li>`).join("")}
         </ul>
         <div class="meal-foot">

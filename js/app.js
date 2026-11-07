@@ -8,7 +8,7 @@
   const CYCLE = App.cycle;
   const PROFILE = App.profile;
   const { ROUTES, SCREEN_IDS, PAGE_TITLES } = App.const;
-  const { NOW, TODAY, isoDate, escapeHtml, icon, one, weight, plural, percent, formatShortDate } = App.util;
+  const { NOW, TODAY, isoDate, escapeHtml, icon, one, num, weight, plural, percent, formatShortDate } = App.util;
   const { openSheet, closeSheet } = App.ui;
 
   let currentRoute = null;
@@ -1390,6 +1390,58 @@
     });
   }
 
+  // Рецепт берётся из каталога, а граммы, калории и макросы — из самого блюда:
+  // в js/recipes.js чисел нет, чтобы они не разошлись с меню.
+  function findDish(dayIndex, name) {
+    const days = [DATA.menus[dayIndex], DATA.menus[STATE.foodDay]].concat(DATA.menus);
+    for (const day of days) {
+      if (!day) continue;
+      for (const dishes of day) {
+        const dish = dishes.find((item) => item.n === name);
+        if (dish) return dish;
+      }
+    }
+    return null;
+  }
+
+  function openRecipeSheet(name, dish) {
+    const entry = App.recipes ? App.recipes.get(name) : null;
+    const target = dish && dish.n === name ? dish : findDish(0, name);
+    const dishName = escapeHtml(name);
+    if (!entry) {
+      openSheet({
+        title: "Рецепт",
+        bodyHtml: `
+          <div class="recipe-sheet">
+            <p class="recipe-name">${dishName}</p>
+            ${target ? `<p class="recipe-facts">≈ ${num(target.g)} г · ${num(target.k)} ккал</p>` : ""}
+            <p class="recipe-foot">Рецепт скоро появится.</p>
+            <button class="btn btn--ghost contact-sheet-cancel" type="button" data-action="close-sheet">Закрыть</button>
+          </div>`,
+      });
+      return;
+    }
+    const ingredients = entry.ingredients.map((item) => `
+      <div class="recipe-row"><span>${escapeHtml(item.n)}</span><span>${num(item.g)} г</span></div>`).join("");
+    const steps = entry.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("");
+    openSheet({
+      title: "Рецепт",
+      bodyHtml: `
+        <div class="recipe-sheet">
+          <p class="recipe-name">${dishName}</p>
+          <p class="recipe-facts">≈ ${num(target.g)} г · ${num(target.k)} ккал · ${entry.time} мин</p>
+          <p class="recipe-macros">Б ${one(target.p)} · Ж ${one(target.f)} · У ${one(target.c)}</p>
+          <h3 class="recipe-title">Состав</h3>
+          <div class="recipe-list">${ingredients}</div>
+          <h3 class="recipe-title">Как готовить</h3>
+          <ol class="recipe-steps">${steps}</ol>
+          ${entry.note ? `<p class="recipe-note">${escapeHtml(entry.note)}</p>` : ""}
+          <p class="recipe-foot">Граммы подобраны под твою норму калорий.</p>
+          <button class="btn btn--ghost contact-sheet-cancel" type="button" data-action="close-sheet">Закрыть</button>
+        </div>`,
+    });
+  }
+
   function editContactsSheet() {
     openSheet({
       title: "Контакты",
@@ -1818,6 +1870,12 @@
         if (!DATA.menus[day]) return;
         STATE.foodDay = day;
         render("nutrition", { static: true, focusKey: trigger.dataset.focus });
+        break;
+      }
+      case "open-recipe": {
+        const name = trigger.dataset.dish || "";
+        const day = Number(trigger.dataset.day);
+        openRecipeSheet(name, findDish(day, name));
         break;
       }
       case "open-measure-form":
