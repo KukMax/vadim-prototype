@@ -27,6 +27,25 @@
       </div>`;
   }
 
+  // Желаемый вес нужен только целям «похудеть» и «набрать»: у «поддерживать»
+  // поле скрыто, целевой вес равен текущему.
+  function asksTargetWeight() {
+    const goal = STATE.onboarding.data.goal;
+    return goal === "lose" || goal === "gain";
+  }
+
+  function targetWeightField() {
+    const available = asksTargetWeight();
+    return `
+      <div class="pub-field" data-field="targetWeight"${available ? "" : " hidden"}>
+        <label class="pub-label" for="onboarding-target-weight">Желаемый вес, кг</label>
+        <input class="input" id="onboarding-target-weight" name="targetWeight" type="text"
+          inputmode="decimal" maxlength="5" placeholder="65" value="${value("targetWeight")}"
+          aria-describedby="onboarding-targetWeight-error">
+        ${fieldError("targetWeight")}
+      </div>`;
+  }
+
   function optionMarkup(name, option, hint) {
     const checked = STATE.onboarding.data[name] === option.key;
     return `
@@ -104,7 +123,7 @@
             ${icon("check")}<span>Нет ограничений</span>
           </button>
         </div>
-        <p class="pub-hint" id="onboarding-limitations-hint">Опишите травмы, боли и запреты врача — тренер учтёт их в программе. Если ограничений нет, отметьте «Нет ограничений».</p>
+        <p class="pub-hint" id="onboarding-limitations-hint">Необязательно. Опишите травмы, боли и запреты врача — тренер учтёт их в программе.</p>
         ${fieldError("limitations")}
       </div>`;
   }
@@ -119,6 +138,7 @@
           ${textField({ key: "height", label: "Рост, см", attrs: ' inputmode="numeric" maxlength="3" placeholder="180"' })}
           ${textField({ key: "weight", label: "Вес, кг", attrs: ' inputmode="decimal" maxlength="5" placeholder="72,5"' })}
         </div>
+        ${targetWeightField()}
         ${textField({ key: "age", label: "Возраст, лет", attrs: ' inputmode="numeric" maxlength="3" placeholder="32"' })}
         ${group({ key: "goal", label: "Цель", options: Q.goals, hints: true })}
         ${rangeField()}
@@ -128,7 +148,35 @@
       </form>`;
   }
 
+  // Правка анкеты переиспользует этот же экран: шаг 2 скрыт, пакет не меняется.
+  function editing() {
+    return App.onboarding.isEditing();
+  }
+
+  function visibleSteps() {
+    const nutrition = App.onboarding.hasNutrition();
+    if (editing()) return nutrition ? [1, 3] : [1];
+    return nutrition ? [1, 2, 3] : [1, 2];
+  }
+
+  function cancelButton() {
+    return `<button class="btn btn--ghost" type="button" data-action="cancel-questionnaire">${icon("chevron-left")}Отмена</button>`;
+  }
+
   function stepOneActions() {
+    if (editing()) {
+      const last = !App.onboarding.hasNutrition();
+      const next = last
+        ? `<button class="btn btn--primary" type="button" data-action="save-questionnaire">Сохранить изменения</button>`
+        : `<button class="btn btn--primary" type="submit" form="onboarding-form">Далее</button>`;
+      return `
+      <div class="pub-sticky ob-actions">
+        <div class="ob-actions-inner">
+          ${cancelButton()}
+          ${next}
+        </div>
+      </div>`;
+    }
     return `
       <div class="pub-sticky ob-actions">
         <div class="ob-actions-inner">
@@ -372,11 +420,12 @@
     return `
       <section class="card ob-card ob-allergies">
         <h2 class="ob-card-title">Аллергии и непереносимость продуктов</h2>
-        <p class="card-hint">Перечислите через запятую — или отметьте, что аллергий нет.</p>
         <div class="pub-field" data-field="allergies">
           <label class="pub-label" for="onboarding-allergies">Аллергии и непереносимость</label>
           <textarea class="ob-textarea" id="onboarding-allergies" name="allergies" rows="3"
-            maxlength="${Q.allergies.max}" aria-describedby="onboarding-allergies-error">${escapeHtml(data.allergies)}</textarea>
+            maxlength="${Q.allergies.max}"
+            aria-describedby="onboarding-allergies-hint onboarding-allergies-error">${escapeHtml(data.allergies)}</textarea>
+          <p class="pub-hint" id="onboarding-allergies-hint">Необязательно. Укажите аллергии и непереносимость продуктов.</p>
           ${fieldError("allergies")}
         </div>
         <div class="ob-chip-row">
@@ -397,6 +446,15 @@
   }
 
   function stepThreeActions() {
+    if (editing()) {
+      return `
+      <div class="pub-sticky ob-actions">
+        <div class="ob-actions-inner">
+          ${cancelButton()}
+          <button class="btn btn--primary" type="button" data-action="save-questionnaire">Сохранить изменения</button>
+        </div>
+      </div>`;
+    }
     return `
       <div class="pub-sticky ob-actions">
         <div class="ob-actions-inner">
@@ -413,13 +471,22 @@
 
   function onboardingView() {
     const step = App.onboarding.step();
-    const total = App.onboarding.steps();
-    const percent = Math.round((step / total) * 100);
-    const leads = {
-      1: "Расскажите о себе — это займёт минуту. Ответы нужны, чтобы подобрать нагрузку и питание.",
-      2: "Профиль готов. Выберите пакет — состав можно обсудить с Вадимом до оплаты.",
-      3: "Чем больше вы отметите продуктов, тем разнообразнее будет рацион.",
-    };
+    const edit = editing();
+    const steps = visibleSteps();
+    const index = Math.max(0, steps.indexOf(step)) + 1;
+    const total = steps.length;
+    const percent = Math.round((index / total) * 100);
+    const leads = edit
+      ? {
+        1: "Измените ответы и сохраните — анкета уйдёт Вадиму в обновлённом виде.",
+        3: "Отметьте, что изменилось, и сохраните — рацион обновится.",
+      }
+      : {
+        1: "Расскажите о себе — это займёт минуту. Ответы нужны, чтобы подобрать нагрузку и питание.",
+        2: "Профиль готов. Выберите пакет — состав можно обсудить с Вадимом до оплаты.",
+        3: "Чем больше вы отметите продуктов, тем разнообразнее будет рацион.",
+      };
+    const title = edit ? "Моя анкета" : step === 3 ? "Предпочтения в питании" : "Анкета";
     const body = step === 1
       ? stepOneForm() + stepOneActions()
       : step === 2
@@ -429,21 +496,21 @@
       <div class="pub pub--auth pub--onboarding">
         <header class="pub-topbar">
           <a class="pub-topbar-brand" href="#/welcome" aria-label="Trenio — на страницу входа">${UI.logoLockup("sm")}</a>
-          <div class="pub-topbar-actions">${UI.themeToggle()}</div>
+          <div class="pub-topbar-actions">${edit ? "" : `<button class="icon-button" type="button" data-action="leave-onboarding" aria-label="Выйти из анкеты">${icon("x")}</button>`}${UI.themeToggle()}</div>
         </header>
         <div class="pub-body">
           <div class="ob-step">
-            <p class="ob-step-label" id="onboarding-step-label">Шаг ${step} из ${total}</p>
-            <div class="ob-progress" role="progressbar" aria-labelledby="onboarding-step-label" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${step}">
+            <p class="ob-step-label" id="onboarding-step-label">Шаг ${index} из ${total}</p>
+            <div class="ob-progress" role="progressbar" aria-labelledby="onboarding-step-label" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${index}">
               <span class="ob-progress-fill" style="width:${percent}%"></span>
             </div>
           </div>
-          <h1 class="pub-title" id="onboarding-title" tabindex="-1">${step === 3 ? "Предпочтения в питании" : "Анкета"}</h1>
+          <h1 class="pub-title" id="onboarding-title" tabindex="-1">${title}</h1>
           <p class="pub-lead">${leads[step]}</p>
+          ${edit ? `<p class="pub-note">Пакет занятий при правке не меняется — если нужно добавить или убрать пакет, напишите Вадиму.</p>` : ""}
           ${step === 3 ? liveLine() : ""}
           ${body}
           <p class="pub-note">Ответы анкеты хранятся только в памяти страницы и не сохраняются на устройстве.</p>
-          <p class="pub-aside"><button class="link-btn" type="button" data-action="leave-onboarding">Выйти</button></p>
           ${UI.footer()}
         </div>
       </div>`;

@@ -40,6 +40,7 @@
       name: { min: 2, max: 40 },
       height: { min: 100, max: 250, unit: "см" },
       weight: { min: 30, max: 300, unit: "кг" },
+      targetWeight: { min: 30, max: 300, unit: "кг" },
       age: { min: 18, max: 90, unit: "лет", minMessage: "Сервис доступен с 18 лет" },
       phone: { min: 10, max: 15 },
       limitations: { max: 400 },
@@ -204,7 +205,6 @@
   DATA.questionnaire.foodErrors = {
     grains: "Выберите хотя бы одну крупу.",
     dishes: "Оставьте хотя бы одно блюдо",
-    allergies: "Опишите аллергии или отметьте «Нет аллергий».",
   };
 
   DATA.questionnaire.allergies = { max: 400 };

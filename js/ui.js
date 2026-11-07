@@ -130,7 +130,7 @@
       </div>`).join("");
     return `<div class="recs">${cards}</div>`;
   }
-  function statTile({ href, route, label, iconName, value, spoken, meta, visual = "", quick = "" }) {
+  function statTile({ href, route, label, iconName, value, spoken, meta, note = "", visual = "", quick = "" }) {
     return `
       <article class="stat-card card${quick ? " stat-card--water" : ""}">
         <a class="stat-link" href="${href}" data-nav="${route}" data-focus="${route}-stat" aria-label="${label}: ${spoken}">
@@ -139,6 +139,7 @@
             <span>
               <span class="stat-value">${value}</span>
               <span class="stat-meta">${meta}</span>
+              ${note ? `<span class="stat-note">${note}</span>` : ""}
             </span>
             ${visual ? `<span class="stat-viz" aria-hidden="true">${visual}</span>` : ""}
           </span>

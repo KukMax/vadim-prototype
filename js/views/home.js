@@ -5,6 +5,7 @@
   const CYCLE = App.cycle;
   const STATE = App.state;
   const SUB = App.subscription;
+  const CALORIES = App.calories;
   const {
     NOW, TODAY, WEEK_DATES, icon, escapeHtml, plural, num, weight, percent,
     formatLongDate, greetingForHour, getNextMeal, eatenTotals, waterCount,
@@ -38,10 +39,73 @@
       </article>`;
   }
 
+  // Название цели — тем же списком, что и на экране анкеты: своих текстов
+  // главная не придумывает.
+  function goalLabel(key) {
+    const goals = DATA.questionnaire && DATA.questionnaire.goals ? DATA.questionnaire.goals : [];
+    const found = goals.filter((entry) => entry.key === key)[0];
+    return found ? found.label : "";
+  }
+
+  // Новый клиент — это тот, у кого пакет ещё ни разу не работал: если он уже
+  // был активен и закончился, путь «анкета → ожидание» ему не показываем.
+  function showNextSteps() {
+    const statuses = [SUB.status("training"), SUB.status("nutrition")];
+    return statuses.indexOf("active") === -1 && statuses.indexOf("completed") === -1;
+  }
+
+  // Пока клиент не внёс ни одного замера, графика и прогресса нет — вместо
+  // них стартовая карточка с весом из анкеты и первым замером.
+  function startCard() {
+    const submission = STATE.submission;
+    if (!submission) return "";
+    const label = goalLabel(submission.goal);
+    const current = submission.weight;
+    const target = submission.targetWeight;
+    const left = current != null && target != null ? current - target : 0;
+    const goalText = label ? `Цель: ${escapeHtml(label.charAt(0).toLowerCase() + label.slice(1))}` : "Цель из анкеты";
+    return `
+      <article class="goal-card card goal-card--start" aria-labelledby="goal-title">
+        <div class="goal-head">
+          <div>
+            <span class="eyebrow">Старт</span>
+            <h2 id="goal-title">${goalText}</h2>
+          </div>
+        </div>
+        <div class="goal-current">
+          <strong>${current == null ? "—" : weight(current)}<small>кг</small></strong>
+          <div class="goal-remaining">сейчас${left > 0 ? `<br>До цели <b>${weight(left)} кг</b>` : ""}</div>
+        </div>
+        <p class="goal-note">Динамика появится после первого замера: раз в неделю, утром и натощак. Замеры видит Вадим.</p>
+        <button class="btn btn--primary goal-start-action" type="button" data-action="open-measure-form">Сделать первый замер</button>
+      </article>`;
+  }
+
+  // «Что дальше»: путь нового клиента, пока ни один пакет ещё не активен.
+  function nextStepsCard() {
+    if (!showNextSteps()) return "";
+    const items = DATA.nextSteps.map((step, index) => `
+        <li class="next-step">
+          <span class="next-step-num" aria-hidden="true">${index + 1}</span>
+          <span class="next-step-copy"><strong>${escapeHtml(step.title)}</strong><span>${escapeHtml(step.text)}</span></span>
+        </li>`).join("");
+    return `
+      <article class="next-steps card" aria-labelledby="home-next-title">
+        <div class="card-head"><h2 class="card-title" id="home-next-title">Что дальше</h2></div>
+        <ol class="next-steps-list">${items}
+        </ol>
+        <div class="next-steps-actions">
+          <button class="btn btn--primary" type="button" data-action="open-contact" data-focus="home-next-contact">Связаться с Вадимом</button>
+          <a class="btn btn--ghost" href="#/workouts" data-nav="workouts">Общие рекомендации</a>
+        </div>
+      </article>`;
+  }
+
   function homeView() {
     const total = DATA.subscription.training.sessions;
     const cycleData = CYCLE.current();
     const trainingStatus = SUB.status("training");
+    const nutritionActive = SUB.status("nutrition") === "active";
     const hasPlan = CYCLE.hasPlan();
     const done = CYCLE.doneCount(cycleData);
     // Истёкший пакет ведёт себя как завершённый: открывать тренировку нельзя.
@@ -49,10 +113,15 @@
     const eaten = eatenTotals(TODAY);
     const water = waterCount(TODAY);
     const latestMeasure = App.measurements.latest();
-    const currentWeight = latestMeasure ? latestMeasure.values.weight : DATA.goal.current;
+    const submission = STATE.submission;
+    // Без замеров вес берём из анкеты, а если и её нет — прочерк: чужих цифр
+    // на главной быть не должно.
+    const currentWeight = latestMeasure ? latestMeasure.values.weight : submission && submission.weight != null ? submission.weight : null;
     const weightDelta = DATA.goal.start - currentWeight;
-    const measuresDue = App.measurements.isDue();
-    const caloriePercent = percent(eaten.kcal, DATA.targets.kcal);
+    const measuresDue = !!latestMeasure && App.measurements.isDue();
+    // Норма калорий — из формулы (или правки тренера), поддержка — из формулы.
+    const calorieTarget = CALORIES.target();
+    const caloriePercent = percent(eaten.kcal, calorieTarget);
     const calorieRing = ringMarkup(caloriePercent, { size: 42, stroke: 4 });
     const waterFull = water >= DATA.targets.water;
     const trainingMeta = trainingStatus === "active"
@@ -66,19 +135,22 @@
     const trainingSpoken = hasPlan
       ? `${done} из ${total} тренировок цикла`
       : CYCLE.isPending() ? "Тренировки ожидают активации" : "Персональный план тренировок не активирован";
-    const stats = `
-      <div class="stats-grid">
+    // Калории и вода — часть пакета питания: без него плитки пустые, а не «ноль».
+    const nutritionTiles = nutritionActive ? `
         ${statTile({
           href: "#/nutrition", route: "nutrition", label: "Калории", iconName: "flame",
-          value: num(eaten.kcal), spoken: `${num(eaten.kcal)} из ${num(DATA.targets.kcal)} ккал`,
-          meta: `из ${num(DATA.targets.kcal)} ккал`, visual: calorieRing,
+          value: num(eaten.kcal), spoken: `${num(eaten.kcal)} из ${num(calorieTarget)} ккал`,
+          meta: `из ${num(calorieTarget)} ккал`, note: `норма ${num(CALORIES.tdee())} ккал`, visual: calorieRing,
         })}
         ${statTile({
           href: "#/nutrition", route: "nutrition", label: "Вода", iconName: "drop",
           value: `${water} <span class="stat-divider">/</span> ${DATA.targets.water}`,
           spoken: `${water} из ${DATA.targets.water} стаканов`, meta: "стаканов",
           quick: `<button class="stat-quick" type="button" data-action="add-water" data-day="${TODAY}" data-focus="water-add" aria-disabled="${waterFull}" aria-label="${waterFull ? "Норма воды на сегодня выполнена" : "Добавить стакан воды"}">${icon(waterFull ? "check" : "plus")}</button>`,
-        })}
+        })}` : "";
+    const stats = `
+      <div class="stats-grid">
+        ${nutritionTiles}
         ${statTile({
           href: "#/workouts", route: "workouts", label: "Тренировки", iconName: "dumbbell",
           value: trainingValue, spoken: trainingSpoken, meta: trainingMeta,
@@ -86,9 +158,15 @@
         })}
         ${statTile({
           href: "#/reports", route: "reports", label: "Вес", iconName: "scale",
-          value: `${weight(currentWeight)} <span class="stat-unit">кг</span>`,
-          spoken: `Текущий вес ${weight(currentWeight)} килограммов, минус ${weight(weightDelta)} килограмма с начала`,
-          meta: `<span class="stat-trend">${icon("trend-down")}−${weight(weightDelta)} кг с начала</span>`,
+          value: currentWeight == null ? `<span class="stat-divider">—</span>` : `${weight(currentWeight)} <span class="stat-unit">кг</span>`,
+          spoken: currentWeight == null
+            ? "Замеров пока нет"
+            : latestMeasure
+              ? `Текущий вес ${weight(currentWeight)} килограммов, минус ${weight(weightDelta)} килограмма с начала`
+              : `Вес из анкеты ${weight(currentWeight)} килограммов`,
+          meta: latestMeasure
+            ? `<span class="stat-trend">${icon("trend-down")}−${weight(weightDelta)} кг с начала</span>`
+            : currentWeight == null ? "замеров пока нет" : "из анкеты",
         })}
       </div>`;
     const cycleCardMarkup = hasPlan
@@ -100,26 +178,27 @@
           ${cycleMini(cycleData)}
         </article>`
       : "";
+    // Сообщение от Вадима — демо-текст демо-клиента: у нового клиента
+    // сообщений ещё нет, поэтому карточка не показывается.
+    const sideCards = `${STATE.submission ? "" : messageCard()}${nutritionActive ? nextMealCard() : ""}`;
     return `
       <div class="screen-head">
         <span class="eyebrow"><span class="eyebrow-dot"></span>${formatLongDate(WEEK_DATES[TODAY])}</span>
         <h1 class="home-title" id="home-title" tabindex="-1">${greetingForHour(NOW.getHours())}, <span class="home-name">${escapeHtml(App.profile.displayName())}</span></h1>
       </div>
       ${pendingBanner()}
+      ${nextStepsCard()}
       ${measuresDue ? `<a class="measure-reminder" href="#/reports" data-action="open-measure-form"><span class="measure-reminder-icon">${icon("calendar")}</span><span class="measure-reminder-copy"><strong>Пора внести замеры — раз в неделю</strong><span>Так прогресс виден точнее</span></span><span class="measure-reminder-cta">Внести ${icon("chevron-right")}</span></a>` : ""}
       <div class="dash-grid">
         ${next ? trainingHero(cycleData, next, total) : planHero()}
         ${stats}
-        ${goalCard()}
-        <article class="macro-card card" aria-label="Макросы за сегодня">
+        ${latestMeasure ? goalCard() : startCard()}
+        ${nutritionActive ? `<article class="macro-card card" aria-label="Макросы за сегодня">
           <div class="card-head"><h2 class="card-title">Макросы сегодня</h2><span class="card-hint">из нормы</span></div>
           ${macroRows(eaten)}
-        </article>
+        </article>` : ""}
         ${cycleCardMarkup}
-        <div class="home-side">
-          ${messageCard()}
-          ${nextMealCard()}
-        </div>
+        ${sideCards ? `<div class="home-side">${sideCards}</div>` : ""}
       </div>`;
   }
 

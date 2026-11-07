@@ -36,10 +36,11 @@
   function guardRoute(route) {
     const stage = STATE.auth.stage;
     const client = stage === "client";
+    const editing = route === "onboarding" && App.onboarding.isEditing();
     if (!client && !isPublicRoute(route)) return "welcome";
-    if (client && isPublicRoute(route)) return "home";
+    if (client && isPublicRoute(route) && !editing) return "home";
     if (route === "verify" && stage !== "verifying") return "welcome";
-    if (route === "onboarding" && stage !== "onboarding") return "welcome";
+    if (route === "onboarding" && stage !== "onboarding" && !editing) return "welcome";
     return route;
   }
 
@@ -76,6 +77,9 @@
     const view = App.views[route];
     const screen = document.getElementById(SCREEN_IDS[route]);
     if (!view || !screen) return;
+    // Правка анкеты живёт только внутри экрана онбординга: уход на другой
+    // экран без сохранения отменяет черновик, чтобы режим правки не «залипал».
+    if (route !== "onboarding" && App.onboarding.isEditing()) App.onboarding.cancelEdit();
     const settings = options || {};
     const previousRoute = currentRoute;
     // Only a real route change (first load, hashchange, nav link to another route)
@@ -334,6 +338,111 @@
     render("workouts", { focusKey: "session-" + session.number });
   }
 
+  /* ---------- подходы и комментарий клиента ---------- */
+
+  // Правки клиента живут только в STATE.cycle.edits и никогда не меняют план.
+  function sessionItem(itemId) {
+    const cycleData = CYCLE.current();
+    if (!CYCLE.isCurrent(cycleData)) return null;
+    const session = CYCLE.findSession(cycleData, STATE.cycle.selected) ||
+      CYCLE.findSession(cycleData, 1) || cycleData.sessions[0];
+    if (!session) return null;
+    let found = null;
+    session.blocks.forEach((block) => {
+      block.items.forEach((item) => {
+        if (item.id === itemId) found = item;
+      });
+    });
+    return found;
+  }
+
+  // Повторения: целое 1–999, для упражнений на время — 1–3600 секунд.
+  function parseReps(value, isTime) {
+    const raw = String(value).trim();
+    if (!/^\d{1,4}$/.test(raw)) return null;
+    const number = Number(raw);
+    const max = isTime ? 3600 : 999;
+    return number >= 1 && number <= max ? number : null;
+  }
+
+  // Вес: 0–500 с одним знаком после запятой или точки; пусто — «свой вес».
+  function parseWeight(value) {
+    const raw = String(value).trim().replace(",", ".");
+    if (!raw) return null;
+    if (!/^\d{1,3}(\.\d)?$/.test(raw)) return undefined;
+    const number = Number(raw);
+    return number >= 0 && number <= 500 ? number : undefined;
+  }
+
+  function weightField(weight) {
+    return typeof weight === "number" && isFinite(weight) ? String(weight) : "";
+  }
+
+  function saveSetField(target) {
+    const item = sessionItem(target.dataset.item);
+    if (!item) return;
+    const record = CYCLE.ensureEdit(item);
+    const index = Number(target.dataset.set);
+    const set = record.sets[index];
+    if (!set) return;
+    if (target.dataset.role === "set-reps") {
+      const reps = parseReps(target.value, item.unit === "sec");
+      // Некорректный ввод тихо возвращаем к сохранённому значению.
+      if (reps === null) {
+        target.value = String(set.reps);
+        return;
+      }
+      set.reps = reps;
+      target.value = String(reps);
+      return;
+    }
+    const weight = parseWeight(target.value);
+    if (weight === undefined) {
+      target.value = weightField(set.weight);
+      return;
+    }
+    set.weight = weight;
+  }
+
+  function saveComment(target) {
+    const item = sessionItem(target.dataset.item);
+    if (!item) return;
+    const record = CYCLE.ensureEdit(item);
+    record.comment = target.value.slice(0, 300);
+  }
+
+  function addSet(trigger) {
+    const item = sessionItem(trigger.dataset.item);
+    if (!item) return;
+    const record = CYCLE.ensureEdit(item);
+    if (record.sets.length >= DATA.maxSets) return;
+    const last = record.sets[record.sets.length - 1] || { reps: 1, weight: null };
+    record.sets.push({ reps: last.reps, weight: last.weight, added: true });
+    render("workouts", {
+      static: true,
+      focusKey: "set-reps-" + item.id + "-" + (record.sets.length - 1)
+    });
+  }
+
+  function removeSet(trigger) {
+    const item = sessionItem(trigger.dataset.item);
+    if (!item) return;
+    const record = CYCLE.ensureEdit(item);
+    const index = Number(trigger.dataset.set);
+    // Удалять можно только подходы, добавленные клиентом.
+    if (!record.sets[index] || !record.sets[index].added) return;
+    record.sets.splice(index, 1);
+    render("workouts", { static: true, focusKey: "add-set-" + item.id });
+  }
+
+  function toggleComment(trigger) {
+    const item = sessionItem(trigger.dataset.item);
+    if (!item) return;
+    const open = STATE.cycle.commentOpen === item.id;
+    STATE.cycle.commentOpen = open ? null : item.id;
+    render("workouts", { static: true, focusKey: "comment-" + item.id });
+  }
+
   /* ---------- демо: липкая панель ---------- */
 
   // Панель «Зарегистрироваться» появляется только после того, как первая
@@ -589,13 +698,28 @@
 
   // Значения шага 1 живут только в памяти: STATE.onboarding.data.
   // Строки храним как введены (запятая в весе сохраняется), тренировки — числом.
-  const ONBOARDING_FIELDS = ["name", "phone", "sex", "height", "weight", "age", "goal", "sessionsPerWeek", "fitness", "activity", "limitations"];
+  const ONBOARDING_FIELDS = ["name", "phone", "sex", "height", "weight", "targetWeight", "age", "goal", "sessionsPerWeek", "fitness", "activity", "limitations"];
   let limitationsBackup = "";
 
   function parseDecimal(raw) {
     const text = String(raw == null ? "" : raw).trim().replace(/\s+/g, "").replace(",", ".");
     if (!/^\d+(\.\d+)?$/.test(text)) return NaN;
     return Number(text);
+  }
+
+  // Поле «Желаемый вес» появляется только у целей «похудеть» и «набрать».
+  // Переключаем атрибут hidden, а не перерисовываем шаг: фокус и прокрутка
+  // остаются на месте, поле с уже введённой цифрой не теряется.
+  function targetWeightAsked() {
+    const goal = STATE.onboarding.data.goal;
+    return goal === "lose" || goal === "gain";
+  }
+
+  function syncTargetWeightField() {
+    const field = document.querySelector('#onboarding-form .pub-field[data-field="targetWeight"]');
+    if (!field) return;
+    field.hidden = !targetWeightAsked();
+    if (field.hidden) publicFieldError(field.closest("form"), "targetWeight", "");
   }
 
   // Ввод не перерисовывает экран: обновляем состояние и живой текст, чтобы
@@ -614,6 +738,7 @@
     } else if (target.type === "radio") {
       if (!target.checked) return;
       data[name] = target.value;
+      if (name === "goal") syncTargetWeightField();
     } else if (target instanceof HTMLTextAreaElement) {
       data.limitations = target.value;
     } else {
@@ -687,6 +812,21 @@
     else if (!isFinite(weight)) add("weight", "Вес указывается числом.");
     else if (weight < L.weight.min || weight > L.weight.max) add("weight", `Вес — от ${L.weight.min} до ${L.weight.max} кг.`);
 
+    // Желаемый вес спрашиваем только у целей «похудеть» и «набрать»:
+    // у «поддерживать» целевой вес равен текущему, а поле скрыто.
+    if (targetWeightAsked()) {
+      const target = parseDecimal(data.targetWeight);
+      if (!String(data.targetWeight || "").trim()) add("targetWeight", "Укажите желаемый вес.");
+      else if (!isFinite(target)) add("targetWeight", "Желаемый вес указывается числом.");
+      else if (target < L.targetWeight.min || target > L.targetWeight.max) {
+        add("targetWeight", `Желаемый вес — от ${L.targetWeight.min} до ${L.targetWeight.max} кг.`);
+      } else if (data.goal === "lose" && isFinite(weight) && target >= weight) {
+        add("targetWeight", "Желаемый вес должен быть меньше текущего");
+      } else if (data.goal === "gain" && isFinite(weight) && target <= weight) {
+        add("targetWeight", "Желаемый вес должен быть больше текущего");
+      }
+    }
+
     const age = parseDecimal(data.age);
     if (!String(data.age || "").trim()) add("age", "Укажите возраст.");
     else if (!isFinite(age)) add("age", "Возраст указывается числом.");
@@ -704,9 +844,11 @@
     if (!data.fitness) add("fitness", "Выберите уровень подготовки.");
     if (!data.activity) add("activity", "Выберите уровень активности.");
 
+    // Ограничения — свободный текст и необязательное поле: пусто и при этом
+    // не отмечено «Нет ограничений» — это тоже валидный ответ. Проверяем
+    // только длину.
     const limitations = String(data.limitations || "").trim();
-    if (!limitations && !data.noLimitations) add("limitations", "Опишите ограничения или отметьте «Нет ограничений».");
-    else if (limitations.length > L.limitations.max) add("limitations", `Не больше ${L.limitations.max} символов.`);
+    if (limitations.length > L.limitations.max) add("limitations", `Не больше ${L.limitations.max} символов.`);
 
     return problems;
   }
@@ -740,7 +882,35 @@
       if (phoneField) phoneField.value = normalized;
       if (!validateOnboarding(form)) return;
     }
+    // В режиме правки шаг 2 недоступен: сразу к питанию или к сохранению.
+    if (App.onboarding.isEditing()) {
+      if (App.onboarding.hasNutrition()) showOnboardingStep(3);
+      else saveQuestionnaire();
+      return;
+    }
     showOnboardingStep(App.onboarding.step() + 1);
+  }
+
+  // Сохранение правки анкеты: те же проверки, что при отправке, но без смены
+  // стадии, статусов пакетов и выхода из кабинета.
+  function saveQuestionnaire() {
+    const form = document.getElementById("onboarding-form");
+    if (form) {
+      const phoneField = form.querySelector('[data-field="phone"] input');
+      const normalized = normalizePhone(STATE.onboarding.data.phone);
+      STATE.onboarding.data.phone = normalized;
+      if (phoneField) phoneField.value = normalized;
+      if (!validateOnboarding(form)) return;
+    }
+    if (App.onboarding.hasNutrition()) {
+      if (!validateFood()) {
+        if (App.onboarding.step() !== 3) showOnboardingStep(3);
+        return;
+      }
+    }
+    if (!App.onboarding.saveEdit()) return;
+    go("questionnaire");
+    toast("Анкета обновлена");
   }
 
   function previousOnboardingStep() {
@@ -1031,7 +1201,8 @@
     if (textarea) textarea.setAttribute("aria-invalid", "false");
   }
 
-  // Проверки шага 3: обязательные категории продуктов, блюда и аллергии.
+  // Проверки шага 3: обязательные категории продуктов и блюда. Аллергии —
+  // необязательное поле, у него проверяем только длину.
   function foodProblems() {
     const data = STATE.onboarding.data;
     const F = DATA.questionnaire.foodErrors;
@@ -1041,7 +1212,10 @@
     });
     const emptyDishes = DATA.questionnaire.dishes.filter((group) => group.required && !dishesPicked(group).length);
     if (emptyDishes.length) problems.push([`dish:${emptyDishes[0].key}`, F.dishes]);
-    if (!String(data.allergies || "").trim() && !data.noAllergies) problems.push(["allergies", F.allergies]);
+    const allergies = String(data.allergies || "").trim();
+    if (allergies.length > DATA.questionnaire.allergies.max) {
+      problems.push(["allergies", `Не больше ${DATA.questionnaire.allergies.max} символов.`]);
+    }
     return problems;
   }
 
@@ -1536,6 +1710,15 @@
         }
         break;
       }
+      case "add-set":
+        addSet(trigger);
+        break;
+      case "remove-set":
+        removeSet(trigger);
+        break;
+      case "toggle-comment":
+        toggleComment(trigger);
+        break;
       case "finish-workout":
         finishWorkout();
         break;
@@ -1622,6 +1805,7 @@
         // чистый демо-клиент: имя, пакеты и ожидание активации тоже стираем.
         App.onboarding.reset();
         STATE.submission = null;
+        STATE.questionnaire = null;
         STATE.training.status = DATA.subscription.training.status;
         STATE.nutrition = { status: DATA.subscription.nutrition.status };
         STATE.demoExpiry = { training: false, nutrition: false };
@@ -1647,6 +1831,25 @@
         break;
       case "open-contact":
         contactSheet();
+        break;
+      case "open-questionnaire":
+        go("questionnaire");
+        break;
+      // Правка идёт через экран онбординга: второй формы для тех же полей нет.
+      case "edit-questionnaire":
+        if (!App.onboarding.beginEdit()) {
+          toast("Ответы анкеты уже не в памяти — заполните её заново");
+          contactSheet();
+          break;
+        }
+        go("onboarding");
+        break;
+      case "cancel-questionnaire":
+        App.onboarding.cancelEdit();
+        go("questionnaire");
+        break;
+      case "save-questionnaire":
+        saveQuestionnaire();
         break;
       case "toggle-report-form":
         STATE.reportFormOpen = !STATE.reportFormOpen;
@@ -1793,6 +1996,10 @@
         // Ответы анкеты живут в памяти, поэтому выход их тоже стирает.
         App.onboarding.reset();
         STATE.submission = null;
+        STATE.questionnaire = null;
+        // Правки подходов и комментарии клиента — тоже только в памяти.
+        STATE.cycle.edits = {};
+        STATE.cycle.commentOpen = null;
         App.auth.setStage("guest");
         closeSheet();
         go("welcome");
@@ -1850,6 +2057,15 @@
     if (target instanceof HTMLInputElement &&
         (target.dataset.action === "set-training-status" || target.dataset.action === "set-nutrition-status")) {
       handleAction(target.dataset.action, target);
+      return;
+    }
+    if (target instanceof HTMLInputElement &&
+        (target.dataset.role === "set-reps" || target.dataset.role === "set-weight")) {
+      saveSetField(target);
+      return;
+    }
+    if (target instanceof HTMLTextAreaElement && target.dataset.role === "set-comment") {
+      saveComment(target);
       return;
     }
     if (target instanceof HTMLInputElement && target.name === "consent") {

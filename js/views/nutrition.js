@@ -4,6 +4,7 @@
   const DATA = App.data;
   const STATE = App.state;
   const SUB = App.subscription;
+  const CALORIES = App.calories;
   const {
     TODAY, DAY_SHORT, WEEK_DATES, icon, escapeHtml, one, num, formatLongDate,
     sumDishes, planTotals, eatenTotals, eatenMealCount, waterCount, percent, clamp,
@@ -32,6 +33,7 @@
         <p class="plan-banner-copy">${escapeHtml(text)}</p>
         <button class="btn btn--primary plan-banner-action" type="button" data-action="open-contact" data-focus="contact-coach">Связаться с Вадимом</button>
       </article>
+      ${normCard()}
       <div class="recs-block">
         ${recsList(DATA.generalRecs.nutrition, "nutrition-rec")}
         <p class="recs-note">${escapeHtml(DATA.generalRecs.note)}</p>
@@ -53,8 +55,9 @@
     const dayIndex = STATE.foodDay;
     const eaten = eatenTotals(dayIndex);
     const eatenMeals = eatenMealCount(dayIndex);
-    const caloriePercent = percent(eaten.kcal, DATA.targets.kcal);
-    const remaining = DATA.targets.kcal - eaten.kcal;
+    const calorieTarget = CALORIES.target();
+    const caloriePercent = percent(eaten.kcal, calorieTarget);
+    const remaining = calorieTarget - eaten.kcal;
     const dateLabel = formatLongDate(WEEK_DATES[dayIndex]);
     const water = waterCount(dayIndex);
     return `
@@ -72,7 +75,7 @@
             <div class="target-top">
               <div class="target-copy">
                 <span class="eyebrow">Съедено за день</span>
-                <div class="target-value">${num(eaten.kcal)}<small>/ ${num(DATA.targets.kcal)} ккал</small></div>
+                <div class="target-value">${num(eaten.kcal)}<small>/ ${num(calorieTarget)} ккал</small></div>
                 <div class="target-left">${remaining >= 0 ? `Осталось <b>${num(remaining)} ккал</b>` : `Выше нормы на <b>${num(-remaining)} ккал</b>`}</div>
               </div>
               <div class="target-ring">${ringMarkup(caloriePercent, { size: 94, stroke: 5, label: `${Math.round(caloriePercent)}%` })}</div>
@@ -104,6 +107,7 @@
             </div>
           </article>
           ${weekCaloriesCard(dayIndex)}
+          ${normCard()}
           ${nutritionTipsCard()}
           ${supplementsCard()}
         </aside>
@@ -137,7 +141,8 @@
   }
   function weekCaloriesCard(selected) {
     const calorieMax = 2350;
-    const targetLine = (DATA.targets.kcal / calorieMax) * 100;
+    const calorieTarget = CALORIES.target();
+    const targetLine = clamp((calorieTarget / calorieMax) * 100, 0, 100);
     const days = DAY_SHORT.map((label, index) => {
       const eaten = eatenTotals(index).kcal;
       const plan = planTotals(index).kcal;
@@ -152,9 +157,9 @@
     const a11y = days.map((day) => `${day.label}: ${num(day.eaten)}`).join(", ");
     return `
       <article class="week-chart-card card">
-        <div class="card-head"><h2 class="card-title">Калории за неделю</h2><span class="card-hint">цель ${num(DATA.targets.kcal)}</span></div>
-        <div class="week-chart" role="img" aria-label="Съедено калорий: ${a11y}. Цель ${num(DATA.targets.kcal)} калорий.">
-          <div class="chart-target-line" style="--target-line:${targetLine}%"><span>${num(DATA.targets.kcal)}</span></div>
+        <div class="card-head"><h2 class="card-title">Калории за неделю</h2><span class="card-hint">цель ${num(calorieTarget)}</span></div>
+        <div class="week-chart" role="img" aria-label="Съедено калорий: ${a11y}. Цель ${num(calorieTarget)} калорий.">
+          <div class="chart-target-line" style="--target-line:${targetLine}%"><span>${num(calorieTarget)}</span></div>
           <div class="week-bars">
             ${days.map((day, index) => `
               <div class="week-col${index === selected ? " is-selected" : ""}${index === TODAY ? " is-today" : ""}">
@@ -179,6 +184,28 @@
         <div class="tips-list">
           ${DATA.nutritionTips.map((tip, index) => `<div class="tip"><span class="tip-num">0${index + 1}</span><p>${escapeHtml(tip)}</p></div>`).join("")}
         </div>
+      </article>`;
+  }
+
+  // Карточка «Откуда норма» — только когда анкета заполнена: без анкеты
+  // норма приходит из демо-константы, объяснять нечего.
+  function normCard() {
+    if (!STATE.questionnaire) return "";
+    const info = CALORIES.explain();
+    const activityValue = info.activity.label
+      ? `${escapeHtml(info.activity.label)} · ×${info.activity.factorText}`
+      : `×${info.activity.factorText}`;
+    return `
+      <article class="norm-card card">
+        <div class="card-head"><h2 class="card-title">Откуда норма калорий</h2><span class="card-hint">Миффлин — Сан-Жеор</span></div>
+        <dl class="norm-list">
+          <div class="norm-row"><dt>Базовый обмен</dt><dd>${num(info.bmr)} ккал</dd></div>
+          <div class="norm-row"><dt>Активность (коэффициент)</dt><dd>${activityValue}</dd></div>
+          <div class="norm-row"><dt>Поддержка</dt><dd>${num(info.tdee)} ккал</dd></div>
+          <div class="norm-row"><dt>Поправка на цель</dt><dd>${info.goal.percentText}</dd></div>
+          <div class="norm-row norm-row--total"><dt>Итог</dt><dd>${num(info.target)} ккал</dd></div>
+        </dl>
+        <p class="norm-note">Формула — отправная точка. Вадим может скорректировать норму вручную</p>
       </article>`;
   }
 

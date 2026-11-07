@@ -88,6 +88,8 @@
       sex: "",
       height: "",
       weight: "",
+      // Желаемый вес спрашиваем сразу: он нужен виджету цели в кабинете.
+      targetWeight: "",
       age: "",
       goal: "",
       sessionsPerWeek: DATA.questionnaire.sessionsPerWeek.value,
@@ -111,6 +113,20 @@
   // переключает на пакет без питания — тогда шагов два.
   function defaultPackages() {
     return ["training", "nutrition"];
+  }
+
+  // Копия ответов анкеты: вложенные категории продуктов и блюд не должны
+  // ссылаться на объекты черновика — правка формы не меняет снимок.
+  function cloneValue(value) {
+    if (Array.isArray(value)) return value.map(cloneValue);
+    if (value && typeof value === "object") {
+      const copy = {};
+      Object.keys(value).forEach((key) => {
+        copy[key] = cloneValue(value[key]);
+      });
+      return copy;
+    }
+    return value;
   }
 
   function buildState() {
@@ -137,6 +153,11 @@
         archiveOpen: null,
         done: seeded.done,
         itemDone: seeded.itemDone,
+        // Правки клиента: подходы и комментарий к упражнению. Ключ — id
+        // упражнения, запись создаётся лениво при первой правке.
+        edits: {},
+        // id упражнения с раскрытым полем комментария: раскрытие — не правка.
+        commentOpen: null,
       },
       training: { status: DATA.subscription.training.status },
       // Статус питания меняется только в демо-панели: дни и дата активации
@@ -148,9 +169,15 @@
       // Отправленная анкета — короткий снимок без телефона. Живёт только
       // в памяти и сбрасывается вместе с демо-данными.
       submission: null,
+      // Полная анкета для экрана «Моя анкета»: в отличие от submission здесь
+      // есть телефон, ограничения и аллергии. Живёт только в памяти страницы.
+      questionnaire: null,
+      // Ручная правка нормы калорий: ставится тренером из кабинета — пока
+      // только хук. Пустое значение правкой не считается.
+      calorieOverride: null,
       profile: loadProfile(),
       auth: { stage: loadStage(), email: "" },
-      onboarding: { step: 1, data: defaultOnboardingData(), errors: {}, packages: defaultPackages() },
+      onboarding: { mode: "signup", step: 1, data: defaultOnboardingData(), errors: {}, packages: defaultPackages() },
     };
   }
 
@@ -310,6 +337,39 @@
     isSelectedDone() {
       return this.isDone(DATA.cycles.current, STATE.cycle.selected);
     },
+    // Правки клиента живут только в памяти: подходы и комментарий к упражнению.
+    edits(itemId) {
+      return (itemId && STATE.cycle.edits[itemId]) || null;
+    },
+    // Подходы для показа: правка клиента, если она есть, иначе план тренера.
+    getSets(cycleData, item) {
+      const edit = this.edits(item && item.id);
+      if (edit && Array.isArray(edit.sets) && edit.sets.length) return edit.sets;
+      return (item && item.sets) || [];
+    },
+    getComment(item) {
+      const edit = this.edits(item && item.id);
+      return (edit && edit.comment) || "";
+    },
+    isAdded(itemId, index) {
+      const edit = this.edits(itemId);
+      const set = edit && Array.isArray(edit.sets) ? edit.sets[index] : null;
+      return Boolean(set && set.added);
+    },
+    // Копия подходов из плана: с этого момента упражнение правится отдельно
+    // и шаблон с архивными циклами не меняются.
+    ensureEdit(item) {
+      if (!item || !item.id) return null;
+      if (!STATE.cycle.edits[item.id]) {
+        const sets = (item.sets || []).map((set) => ({
+          reps: set.reps,
+          weight: set.weight === undefined ? null : set.weight,
+          added: false,
+        }));
+        STATE.cycle.edits[item.id] = { sets, comment: "" };
+      }
+      return STATE.cycle.edits[item.id];
+    },
   };
 
   // Срок действия пакета: 30 дней от активации. Демо-дата активации хранится
@@ -412,9 +472,64 @@
     },
   };
 
+  // Число из поля анкеты: запятая разрешена, пустая строка и мусор — null.
+  function decimalValue(raw) {
+    const text = String(raw == null ? "" : raw).trim().replace(/\s+/g, "").replace(",", ".");
+    if (!text) return null;
+    const value = Number(text);
+    return isFinite(value) ? value : null;
+  }
+
+  // Снимок анкеты для экрана «Моя анкета»: цифры — числами, тексты — строками.
+  // Пакеты фиксируются на момент отправки: в правке их изменить нельзя.
+  function questionnaireSnapshot(data, at, packages) {
+    const weight = decimalValue(data.weight);
+    const asksTarget = data.goal === "lose" || data.goal === "gain";
+    return {
+      at,
+      packages: packages.slice(),
+      name: String(data.name || "").trim(),
+      phone: String(data.phone || "").trim(),
+      sex: data.sex,
+      age: decimalValue(data.age),
+      height: decimalValue(data.height),
+      weight,
+      targetWeight: asksTarget ? decimalValue(data.targetWeight) : weight,
+      goal: data.goal,
+      sessionsPerWeek: Number(data.sessionsPerWeek),
+      fitness: data.fitness,
+      activity: data.activity,
+      limitations: String(data.limitations || "").trim(),
+      noLimitations: !!data.noLimitations,
+      allergies: String(data.allergies || "").trim(),
+      noAllergies: !!data.noAllergies,
+      foods: cloneValue(data.foods),
+      cookDays: cloneValue(data.cookDays),
+      snacks: Array.isArray(data.snacks) ? data.snacks.slice() : [],
+      dishesOff: cloneValue(data.dishesOff),
+    };
+  }
+
+  // Демо-история принадлежит демо-клиенту: после анкеты у нового клиента нет
+  // ни замеров, ни дневника, ни воды. Статусы пакетов здесь не трогаем — их
+  // выставляет отправка анкеты, а демо-история возвращается только по кнопке
+  // «Сбросить демо-данные» (она перезагружает страницу).
+  function resetClientHistory() {
+    STATE.measurements = [];
+    STATE.meals = Array.from({ length: 7 }, () => DATA.mealTimes.map(() => false));
+    STATE.water = Array.from({ length: 7 }, () => Array.from({ length: DATA.targets.water }, () => false));
+    STATE.foodDay = TODAY;
+    STATE.cycle.done = {};
+    STATE.cycle.itemDone = {};
+    STATE.cycle.edits = {};
+    STATE.cycle.commentOpen = null;
+    STATE.cycle.selected = 1;
+  }
+
   // Анкета онбординга: сброс при входе с экрана подтверждения и при выходе.
   const onboarding = {
     reset() {
+      STATE.onboarding.mode = "signup";
       STATE.onboarding.step = 1;
       STATE.onboarding.data = defaultOnboardingData();
       STATE.onboarding.errors = {};
@@ -438,24 +553,98 @@
     hasNutrition() {
       return STATE.onboarding.packages.indexOf("nutrition") !== -1;
     },
+    // Правка отправленной анкеты — тот же набор полей и валидаторы, что в
+    // онбординге. Пакет при правке не меняется, поэтому шаг 2 недоступен:
+    // видимые шаги — «О себе» и, если пакет с питанием, «Питание».
+    isEditing() {
+      return STATE.onboarding.mode === "edit";
+    },
+    beginEdit() {
+      const source = STATE.questionnaire;
+      if (!source) return false;
+      const draft = defaultOnboardingData();
+      Object.keys(draft).forEach((key) => {
+        if (!(key in source)) return;
+        const raw = source[key];
+        if (key === "height" || key === "weight" || key === "targetWeight" || key === "age") {
+          draft[key] = raw == null || raw === "" ? "" : String(raw);
+        } else if (Array.isArray(raw)) {
+          draft[key] = raw.slice();
+        } else if (raw && typeof raw === "object") {
+          draft[key] = cloneValue(raw);
+        } else {
+          draft[key] = raw;
+        }
+      });
+      STATE.onboarding.mode = "edit";
+      STATE.onboarding.step = 1;
+      STATE.onboarding.errors = {};
+      STATE.onboarding.packages = source.packages.slice();
+      STATE.onboarding.data = draft;
+      return true;
+    },
+    // Отмена правки: черновик и пакеты остаются как были, анкета не меняется.
+    cancelEdit() {
+      STATE.onboarding.mode = "signup";
+      STATE.onboarding.step = 1;
+      STATE.onboarding.errors = {};
+    },
+    // Сохранение правки: обновляем анкету и короткий снимок для кабинета.
+    // Статусы пакетов и сессию не трогаем — это не новая отправка анкеты.
+    saveEdit() {
+      const previous = STATE.questionnaire;
+      if (!previous) return null;
+      const data = STATE.onboarding.data;
+      const updated = questionnaireSnapshot(data, previous.at, previous.packages);
+      STATE.questionnaire = updated;
+      if (STATE.submission) {
+        STATE.submission.name = updated.name;
+        STATE.submission.goal = updated.goal;
+        STATE.submission.sessionsPerWeek = updated.sessionsPerWeek;
+        STATE.submission.height = updated.height;
+        STATE.submission.weight = updated.weight;
+        STATE.submission.targetWeight = updated.targetWeight;
+      }
+      this.cancelEdit();
+      return updated;
+    },
     // Шаг 3 нужен только пакету с питанием: у одних тренировок анкета
     // отправляется прямо со шага 2, поэтому шагов всего два.
     steps() {
       return this.hasNutrition() ? 3 : 2;
     },
     // Отправка анкеты: стадия "client" сохраняется как раньше, ответы — нет.
-    // В снимок не попадает телефон: имя, цель и частота нужны только для
-    // приветствия и чипов на главной.
+    // В снимок не попадают ни телефон, ни ограничения, ни аллергии: это
+    // медицинские подробности, экранам кабинета они не нужны. Цифры анкеты —
+    // числа: рост, текущий и желаемый вес. Для цели «поддерживать» желаемый
+    // вес равен текущему, его не спрашивают.
     submitForm() {
       const data = STATE.onboarding.data;
       const packages = this.packages();
+      const weight = decimalValue(data.weight);
+      const goal = data.goal;
+      const asksTarget = goal === "lose" || goal === "gain";
       STATE.submission = {
         at: new Date().toISOString(),
         packages,
         name: String(data.name || "").trim(),
-        goal: data.goal,
+        goal,
         sessionsPerWeek: Number(data.sessionsPerWeek),
+        height: decimalValue(data.height),
+        weight,
+        targetWeight: asksTarget ? decimalValue(data.targetWeight) : weight,
       };
+      // Полная анкета для «Моей анкеты»: телефон и медицинские подробности
+      // остаются в памяти страницы и в снимок кабинета не попадают.
+      STATE.questionnaire = questionnaireSnapshot(data, STATE.submission.at, packages);
+      // Контакты в профиле — свои: телефон из анкеты, почта из регистрации.
+      // Демо-контакты остаются только у демо-клиента.
+      const phone = String(data.phone || "").trim();
+      const email = auth.email();
+      if (phone) STATE.profile.phone = phone;
+      if (email) STATE.profile.email = email;
+      if (phone || email) profile.save();
+      resetClientHistory();
       STATE.training.status = packages.indexOf("training") !== -1 ? "pending" : "none";
       if (!STATE.nutrition) STATE.nutrition = { status: "none" };
       STATE.nutrition.status = packages.indexOf("nutrition") !== -1 ? "pending" : "none";

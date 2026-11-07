@@ -6,13 +6,19 @@
   const CYCLE = App.cycle;
   const SUB = App.subscription;
   const {
-    icon, escapeHtml, plural, weight, formatShortDateNoYear,
+    icon, escapeHtml, plural, formatShortDateNoYear,
   } = App.util;
   App.views = App.views || {};
 
+  // Название цели — из списка анкеты, без хардкода: у нового клиента своя цель.
+  function goalText(key) {
+    const goals = DATA.questionnaire && DATA.questionnaire.goals ? DATA.questionnaire.goals : [];
+    const found = goals.filter((entry) => entry.key === key)[0];
+    const label = found ? found.label : DATA.client.goal;
+    return label.charAt(0).toLowerCase() + label.slice(1);
+  }
+
   function profileView() {
-    const latest = App.measurements.latest();
-    const currentWeight = latest ? weight(latest.values.weight) : weight(DATA.goal.current);
     const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
     return `
       <div class="screen-head">
@@ -20,7 +26,7 @@
         <h1 class="page-title" id="profile-title" tabindex="-1">Профиль</h1>
       </div>
       <div class="profile-grid">
-        ${identityCard(currentWeight)}
+        ${identityCard()}
         ${contactsCard()}
         ${subscriptionCard()}
         <article class="settings-card card">
@@ -37,6 +43,7 @@
           <div class="card-head"><h2 class="card-title">Связь и приложение</h2></div>
           <div class="action-list">
             <button class="action-row" type="button" data-action="open-contact"><span class="action-icon">${icon("message")}</span><span class="action-label">Связаться с Вадимом</span><span class="action-chevron" aria-hidden="true">${icon("chevron-right")}</span></button>
+            <button class="action-row" type="button" data-action="open-questionnaire"><span class="action-icon">${icon("user")}</span><span class="action-label">Моя анкета</span><span class="action-chevron" aria-hidden="true">${icon("chevron-right")}</span></button>
             <button class="action-row" type="button" data-action="share-app"><span class="action-icon">${icon("share")}</span><span class="action-label">Поделиться приложением</span><span class="action-chevron" aria-hidden="true">${icon("chevron-right")}</span></button>
             <button class="action-row" type="button" data-action="install-app"${standalone ? " hidden" : ""}><span class="action-icon">${icon("install")}</span><span class="action-label">Добавить на главный экран</span><span class="action-chevron" aria-hidden="true">${icon("chevron-right")}</span></button>
           </div>
@@ -51,8 +58,9 @@
       </div>`;
   }
 
-  function identityCard(currentWeight) {
+  function identityCard() {
     const avatar = STATE.profile.avatar;
+    const answers = STATE.questionnaire;
     return `
       <article class="identity-card card">
         <div class="identity-main">
@@ -61,8 +69,7 @@
           </span>
           <div class="identity-copy">
             <h2>${escapeHtml(App.profile.displayName())}</h2>
-            <p class="identity-meta">${DATA.client.age} года · ${DATA.client.height} см · ${currentWeight} кг</p>
-            <span class="goal-chip">Цель: ${escapeHtml(DATA.client.goal.toLowerCase())}</span>
+            <span class="goal-chip">Цель: ${escapeHtml(goalText(answers && answers.goal))}</span>
           </div>
         </div>
         <div class="photo-actions">

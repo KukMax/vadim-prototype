@@ -150,27 +150,97 @@
       </button>`;
   }
 
+  /* ---------- sets table ---------- */
+
+  function repsCaption(item) {
+    return item.unit === "sec" ? "Время (сек)" : "Повторения";
+  }
+
+  function weightText(weight) {
+    return weight === null || weight === undefined ? "" : String(weight);
+  }
+
+  function setRowEditable(item, set, index, added) {
+    return `
+      <div class="set-row">
+        <span class="set-num">${index + 1}</span>
+        <input class="set-input" type="text" inputmode="numeric" autocomplete="off" value="${escapeHtml(String(set.reps))}" aria-label="Подход ${index + 1}: ${escapeHtml(repsCaption(item).toLowerCase())}" data-role="set-reps" data-item="${item.id}" data-set="${index}" data-focus="set-reps-${item.id}-${index}">
+        <input class="set-input" type="text" inputmode="decimal" autocomplete="off" value="${escapeHtml(weightText(set.weight))}" placeholder="свой вес" aria-label="Подход ${index + 1}: вес, кг" data-role="set-weight" data-item="${item.id}" data-set="${index}" data-focus="set-weight-${item.id}-${index}">
+        ${added
+          ? `<button class="set-remove" type="button" data-action="remove-set" data-item="${item.id}" data-set="${index}" data-focus="remove-set-${item.id}-${index}" aria-label="Удалить подход ${index + 1}">${icon("x")}</button>`
+          : `<span class="set-remove-slot" aria-hidden="true"></span>`}
+      </div>`;
+  }
+
+  function setRowStatic(set, index) {
+    const weight = weightText(set.weight);
+    return `
+      <div class="set-row">
+        <span class="set-num">${index + 1}</span>
+        <span class="set-plain">${escapeHtml(String(set.reps))}</span>
+        <span class="set-plain${weight ? "" : " is-muted"}">${weight ? escapeHtml(weight) : "свой вес"}</span>
+      </div>`;
+  }
+
+  function commentPreview(comment) {
+    const flat = comment.replace(/\s+/g, " ").trim();
+    return flat.length > 70 ? flat.slice(0, 70).trim() + "…" : flat;
+  }
+
+  // Архив и демо показывают комментарий клиента текстом: править там нечего.
+  function commentView(item, readOnly) {
+    const comment = C.getComment(item);
+    if (readOnly) {
+      return comment
+        ? `<div class="ex-comment-read"><span class="ex-cap">Комментарий клиента</span><p>${escapeHtml(comment)}</p></div>`
+        : "";
+    }
+    if (STATE.cycle.commentOpen === item.id) {
+      return `
+        <div class="ex-comment">
+          <textarea class="comment-input" rows="3" maxlength="300" placeholder="Как прошло, что мешало, что изменить" aria-label="Комментарий к упражнению: ${escapeHtml(item.name)}" data-role="set-comment" data-item="${item.id}" data-focus="comment-${item.id}">${escapeHtml(comment)}</textarea>
+          <button class="link-btn ex-comment-hide" type="button" data-action="toggle-comment" data-item="${item.id}">Свернуть</button>
+        </div>`;
+    }
+    return `
+      <button class="comment-btn${comment ? " has-value" : ""}" type="button" data-action="toggle-comment" data-item="${item.id}" data-focus="comment-${item.id}" aria-expanded="false">
+        ${icon("message")}<span>Комментарий к упражнению</span>
+      </button>
+      ${comment ? `<p class="comment-preview">${escapeHtml(commentPreview(comment))}</p>` : ""}`;
+  }
+
   function mainRow(cycleData, session, item, index, readOnly) {
     const demo = readOnly === "demo";
     const done = !demo && C.isItemDone(cycleData, item.id);
-    const cells = [
-      ["Подходы", item.sets],
-      ["Вес", item.weight],
-      ["Темп", item.tempo],
-      ["Отдых", item.rest],
-    ].map((cell) => `<span class="ex-cell"><span class="ex-cap">${cell[0]}</span><span class="ex-val">${escapeHtml(cell[1])}</span></span>`).join("");
+    const editable = !readOnly && C.isCurrent(cycleData);
+    const sets = C.getSets(cycleData, item);
+    const rows = sets.map((set, setIndex) => (editable
+      ? setRowEditable(item, set, setIndex, C.isAdded(item.id, setIndex))
+      : setRowStatic(set, setIndex))).join("");
+    const canAdd = editable && sets.length < DATA.maxSets;
     return `
       <div class="ex-row${done ? " is-done" : ""}">
         <div class="ex-head">
           <span class="ex-index">${index}</span>
           <span class="ex-name">${escapeHtml(item.name)}</span>
+          <div class="ex-actions">
+            <a class="tool-btn" href="${item.videoUrl}" target="_blank" rel="noopener noreferrer" data-focus="video-${item.id}" aria-label="Смотреть видео: ${escapeHtml(item.name)}">${icon("play")}</a>
+            ${demo ? "" : readOnly || !C.isCurrent(cycleData) ? `<span class="check-btn is-static is-done" aria-hidden="true">${icon("check")}</span>` : checkButton(session, item, done)}
+          </div>
         </div>
-        ${cells}
+        <div class="set-table${editable ? "" : " set-table--static"}">
+          <div class="set-table-head" aria-hidden="true">
+            <span>Подход</span><span>${escapeHtml(repsCaption(item))}</span><span>Вес (кг)</span>${editable ? "<span></span>" : ""}
+          </div>
+          ${rows}
+        </div>
+        ${canAdd ? `<button class="set-add" type="button" data-action="add-set" data-item="${item.id}" data-focus="add-set-${item.id}">${icon("plus")}Добавить подход</button>` : ""}
+        <div class="ex-tiles">
+          <span class="ex-tile"><span class="ex-cap">Темп</span><span class="ex-val">${escapeHtml(item.tempo)}</span></span>
+          <span class="ex-tile"><span class="ex-cap">Отдых</span><span class="ex-val">${escapeHtml(item.rest)}</span></span>
+        </div>
         ${item.note ? `<p class="ex-note">${escapeHtml(item.note)}</p>` : ""}
-        <div class="ex-actions">
-          <a class="tool-btn" href="${item.videoUrl}" target="_blank" rel="noopener noreferrer" data-focus="video-${item.id}" aria-label="Смотреть видео: ${escapeHtml(item.name)}">${icon("play")}</a>
-          ${demo ? "" : readOnly || !C.isCurrent(cycleData) ? `<span class="check-btn is-static is-done" aria-hidden="true">${icon("check")}</span>` : checkButton(session, item, done)}
-        </div>
+        ${demo ? "" : commentView(item, readOnly)}
       </div>`;
   }
 
@@ -185,11 +255,11 @@
         <h3 class="block-title">${escapeHtml(block.title)}</h3>
         ${hint}
       </div>`;
-    const tableHead = main ? `
-      <div class="ex-table-head" aria-hidden="true">
-        <span>Упражнение</span><span>Подходы</span><span>Вес</span><span>Темп</span><span>Отдых</span><span></span>
-      </div>` : "";
-    return `<section class="block">${head}${tableHead}${rows}</section>`;
+    // Пояснение над первой таблицей: почему поля можно править.
+    const setsHint = main && !readOnly && C.isCurrent(cycleData)
+      ? `<p class="sets-hint">Можно изменить вес и повторения или добавить подход — Вадим увидит.</p>`
+      : "";
+    return `<section class="block">${head}${setsHint}${rows}</section>`;
   }
 
   function blocksView(cycleData, session, readOnly) {

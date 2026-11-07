@@ -42,19 +42,26 @@
         <h1 class="page-title" id="reports-title" tabindex="-1">Отчёты</h1>
         <p class="page-lead">Замеры раз в неделю показывают, что меняется не только на весах.</p>
       </div>
-      <article class="report-status card${due ? " report-status--due" : ""}">
+      ${latest ? `<article class="report-status card${due ? " report-status--due" : ""}">
         <span class="report-status-icon" aria-hidden="true">${icon(due ? "calendar" : "check")}</span>
         <div class="report-status-copy">
-          <h2>${due ? "Пора внести замеры" : `Замеры внесены ${latest ? formatShortDate(latest.date) : ""}`}</h2>
+          <h2>${due ? "Пора внести замеры" : `Замеры внесены ${formatShortDate(latest.date)}`}</h2>
           <p>${statusCopy}</p>
         </div>
         <button class="btn ${due ? "btn--primary" : "btn--ghost"}" type="button" data-action="toggle-report-form" aria-expanded="${!!STATE.reportFormOpen}" aria-controls="measure-form-wrap">${due ? "Внести замеры" : "Изменить"}</button>
-      </article>
+      </article>` : `<article class="report-status card">
+        <span class="report-status-icon" aria-hidden="true">${icon("calendar")}</span>
+        <div class="report-status-copy">
+          <h2>Первый замер — точка отсчёта</h2>
+          <p>Внесите вес и обхваты — динамика появится сразу после первого замера. Измеряйтесь раз в неделю, утром и натощак.</p>
+        </div>
+        <button class="btn btn--primary" type="button" data-action="toggle-report-form" aria-expanded="${!!STATE.reportFormOpen}" aria-controls="measure-form-wrap">Сделать первый замер</button>
+      </article>`}
       <div id="measure-form-wrap"${STATE.reportFormOpen ? "" : " hidden"}>
         ${measureForm(latest)}
       </div>
-      ${dynamicsCard()}
-      ${historyCard()}
+      ${latest ? dynamicsCard() : ""}
+      ${latest ? historyCard() : ""}
     `;
   }
 
@@ -95,8 +102,13 @@
 
   function measureField(field, latest) {
     const previous = latest ? latest.values[field.key] : null;
+    // Первый замер: вес берём из анкеты, остальные поля пустые — без демо-цифр.
+    const submission = STATE.submission;
+    const prefill = !latest && field.key === "weight" && submission && submission.weight != null
+      ? one(submission.weight)
+      : "";
     const hint = previous === null || previous === undefined
-      ? "Первый замер"
+      ? prefill ? "Вес из анкеты" : "Первый замер"
       : `Прошлый раз: ${one(previous)}`;
     return `
       <div class="measure-field" data-field="${field.key}">
@@ -105,7 +117,7 @@
           <button class="field-help" type="button" data-action="toggle-field-help" data-key="${field.key}" aria-expanded="false" aria-controls="help-${field.key}" aria-label="Как измерить: ${escapeHtml(field.label)}">${icon("info")}</button>
         </div>
         <div class="measure-input-wrap">
-          <input id="measure-${field.key}" name="${field.key}" type="text" inputmode="decimal" autocomplete="off" step="0.1" aria-describedby="hint-${field.key} error-${field.key}" aria-invalid="false">
+          <input id="measure-${field.key}" name="${field.key}" type="text" inputmode="decimal" autocomplete="off" step="0.1"${prefill ? ` value="${escapeHtml(prefill)}"` : ""} aria-describedby="hint-${field.key} error-${field.key}" aria-invalid="false">
           <span class="measure-unit">${field.unit}</span>
         </div>
         <p class="field-hint" id="hint-${field.key}">${hint}</p>
@@ -147,8 +159,10 @@
     const width = 640;
     const height = 176;
     const padded = 14;
+    // Без замеров графика нет: динамика строится только по реальным точкам,
+    // а не по пустому списку с делением на ноль.
+    if (!entries || !entries.length) return "";
     const values = entries.map((entry) => entry.values[metric.key]);
-    if (!values.length) return "";
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
     const span = maxValue - minValue || 1;
