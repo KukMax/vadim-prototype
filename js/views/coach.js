@@ -121,6 +121,12 @@
         ${filterChips()}
       </div>
 
+      ${App.coach.hasOverrides() ? `
+      <p class="coach-dirty">
+        <span class="coach-dirty-text">Есть правки — до перезагрузки</span>
+        <button class="coach-reset" type="button" data-action="coach-reset" data-focus="coach-reset-all">Сбросить все правки</button>
+      </p>` : ""}
+
       <div class="coach-list">
         ${list.length ? list.map(clientCard).join("") : emptyState()}
       </div>

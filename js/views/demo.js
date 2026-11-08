@@ -5,7 +5,7 @@
 
   const DATA = App.data;
   const UI = App.publicUi;
-  const { icon, num, one, percent, planTotals } = App.util;
+  const { icon, num, percent, planTotals } = App.util;
   const { ringMarkup } = App.ui;
 
   // Другие вьюхи читаем только в момент вызова: порядок <script> может быть любым.
@@ -29,12 +29,12 @@
     ].map((row) => `
       <div class="demo-macro">
         <span>${row[0]}</span>
-        <b>${one(row[1])} <span>/ ${one(row[2])} г</span></b>
+        <b>${Math.round(row[1])} <span>/ ${Math.round(row[2])} г</span></b>
       </div>`).join("");
     return `
       <article class="card demo-ring-card">
         <div class="demo-ring">
-          ${ringMarkup(percent(plan.kcal, target.kcal), { size: 96, stroke: 8, label: `<b>${num(plan.kcal)}</b><span>ккал</span>` })}
+          ${ringMarkup(percent(plan.kcal, target.kcal), { size: 104, stroke: 8, label: `<b>${num(plan.kcal)}</b><span>ккал</span>` })}
         </div>
         <div class="demo-ring-copy">
           <h3 class="card-title">План на день</h3>

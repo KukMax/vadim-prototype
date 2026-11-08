@@ -126,11 +126,15 @@
 
 .demo-ring-card{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:16px;padding:16px;}
 .demo-ring{display:flex;align-items:center;justify-content:center;}
+/* Подпись внутри кольца: две строки без зазора, с отступами от дуги. */
+.demo-ring .ring-center{padding:0 20px;line-height:1;gap:0;}
+.demo-ring .ring-center b{font-size:calc(var(--ring-size) * .19);font-weight:750;letter-spacing:-.04em;}
+.demo-ring .ring-center span{color:var(--muted);font-size:11px;font-weight:600;letter-spacing:0;}
 .demo-ring-copy{display:flex;flex-direction:column;gap:6px;min-width:0;}
 .demo-ring-text{margin:0;color:var(--muted);font-size:12.5px;line-height:1.4;}
-.demo-macros{display:flex;flex-direction:column;gap:3px;margin-top:2px;}
-.demo-macro{display:flex;align-items:baseline;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px;}
-.demo-macro b{color:var(--text);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;}
+.demo-macros{display:flex;flex-direction:column;gap:4px;margin-top:2px;}
+.demo-macro{display:grid;grid-template-columns:minmax(0,1fr) 88px;align-items:baseline;gap:8px;color:var(--muted);font-size:12px;}
+.demo-macro b{color:var(--text);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;}
 .demo-macro b span{color:var(--muted-2);font-weight:600;}
 .demo-meals{display:flex;flex-direction:column;gap:10px;}
 

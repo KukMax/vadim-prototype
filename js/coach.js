@@ -1,6 +1,8 @@
 /* Кабинет тренера: вымышленные клиенты и правила их пакетов (прототип).
-   Модуль ничего не знает про App.state и не трогает демо-кабинет: только
-   чтение собственных фикстур и чистые функции статусов. */
+   Фикстуры модуль не переписывает. Правки тренера (целевой вес, заметка и
+   объёмы пакетов) лежат в памяти App.state.coachOverrides и накладываются на
+   копию фикстуры при чтении; чтение состояния необязательное, чтобы модуль
+   работал и сам по себе. Демо-кабинет, анкета, план и калории не затрагиваются. */
 (function (App) {
   "use strict";
 
@@ -147,11 +149,19 @@
 
   const PACKAGE_KEYS = ["training", "nutrition"];
   const PACKAGE_TITLES = { training: "Тренировки", nutrition: "Питание" };
+  // Для сообщений об ошибке: «в пакете тренировок», «объём пакета питания».
+  const PACKAGE_GENITIVE = { training: "тренировок", nutrition: "питания" };
 
   // «Заканчивается» считаем по последней неделе пакета.
   const ENDING_DAYS = 7;
   // Отклонение среднего калорий от нормы в пределах сотни — ещё «в норме».
   const BUDGET_TOLERANCE = 100;
+
+  // Границы редактора карточки: их же показывают подписи полей.
+  const WEIGHT_MIN = 30;
+  const WEIGHT_MAX = 300;
+  const NOTE_MAX = 400;
+  const PACKAGE_MAX = { training: 60, nutrition: 180 };
 
   // Глубокая копия: карточка клиента читает вложенные анкету, тренировки и
   // питание, а ручной список полей уже терял новые данные. Фикстуры состоят
@@ -160,13 +170,124 @@
     return JSON.parse(JSON.stringify(client));
   }
 
+  function overrides(id) {
+    const all = App.state && App.state.coachOverrides;
+    return (all && all[id]) || null;
+  }
+
+  // Правки накладываются на копию фикстуры при каждом чтении: исходные данные
+  // не трогаются, а сброс правок возвращает прежние значения сам собой.
+  function withOverrides(client) {
+    if (!client) return null;
+    const copy = clone(client);
+    const patch = overrides(client.id);
+    if (!patch) return copy;
+    if (typeof patch.weightTarget === "number") copy.weightTarget = patch.weightTarget;
+    if (typeof patch.note === "string") copy.note = patch.note;
+    PACKAGE_KEYS.forEach((key) => {
+      const total = patch.packages && patch.packages[key] ? patch.packages[key].total : null;
+      if (typeof total === "number") copy.packages[key].total = total;
+    });
+    return copy;
+  }
+
   function clients() {
-    return CLIENTS.map(clone);
+    return CLIENTS.map(withOverrides);
   }
 
   function find(id) {
     const found = CLIENTS.filter((client) => client.id === id)[0];
-    return found ? clone(found) : null;
+    return found ? withOverrides(found) : null;
+  }
+
+  /* ---------- редактор карточки ---------- */
+
+  // Значение поля как число: в прототипе допускаем запятую вместо точки.
+  function decimal(value) {
+    return String(value === null || value === undefined ? "" : value).trim().replace(",", ".");
+  }
+
+  function weightValue(value) {
+    const text = decimal(value);
+    if (!text) return NaN;
+    const parsed = Number(text);
+    return isFinite(parsed) ? parsed : NaN;
+  }
+
+  function intValue(value) {
+    const text = decimal(value);
+    if (!/^\d+$/.test(text)) return NaN;
+    return Number(text);
+  }
+
+  // Черновик повторяет значения карточки строками — ровно то, что стоит в полях.
+  function draft(client) {
+    if (!client) return null;
+    return {
+      targetWeight: String(client.weightTarget),
+      note: String(client.note || ""),
+      trainingTotal: String(client.packages.training.total),
+      nutritionTotal: String(client.packages.nutrition.total),
+    };
+  }
+
+  function validate(client, draftValue) {
+    const data = draftValue || {};
+    const errors = {};
+    const weight = weightValue(data.targetWeight);
+    if (!isFinite(weight) || weight < WEIGHT_MIN || weight > WEIGHT_MAX) {
+      errors.targetWeight = `Целевой вес — от ${WEIGHT_MIN} до ${WEIGHT_MAX} кг`;
+    }
+    const note = String(data.note === null || data.note === undefined ? "" : data.note);
+    if (note.length > NOTE_MAX) errors.note = `Заметка — не больше ${NOTE_MAX} символов`;
+    PACKAGE_KEYS.forEach((key) => {
+      const field = key + "Total";
+      const value = intValue(data[field]);
+      const used = client && client.packages[key] ? client.packages[key].used : 0;
+      const max = PACKAGE_MAX[key];
+      if (!isFinite(value) || value < 0 || value > max) {
+        errors[field] = `Объём пакета ${PACKAGE_GENITIVE[key]} — целое от 0 до ${max}`;
+      } else if (value < used) {
+        errors[field] = `В пакете ${PACKAGE_GENITIVE[key]} сейчас израсходовано ${used} — объём не может быть меньше`;
+      }
+    });
+    return { ok: Object.keys(errors).length === 0, errors };
+  }
+
+  // Валидный черновик превращается в правку: значение нормализуется, чтобы
+  // повторный вход в редактор показывал те же числа, что и после сохранения.
+  function apply(id, draftValue) {
+    const client = find(id);
+    if (!client) return null;
+    const data = draftValue || {};
+    if (!validate(client, data).ok) return client;
+    if (!App.state) return client;
+    if (!App.state.coachOverrides) App.state.coachOverrides = {};
+    App.state.coachOverrides[id] = {
+      weightTarget: Math.round(weightValue(data.targetWeight) * 10) / 10,
+      note: String(data.note === null || data.note === undefined ? "" : data.note).trim(),
+      packages: {
+        training: { total: intValue(data.trainingTotal) },
+        nutrition: { total: intValue(data.nutritionTotal) },
+      },
+    };
+    return find(id);
+  }
+
+  function hasOverrides(id) {
+    const all = App.state && App.state.coachOverrides;
+    if (!all) return false;
+    if (id) return !!all[id];
+    return Object.keys(all).length > 0;
+  }
+
+  function reset(id) {
+    const all = App.state && App.state.coachOverrides;
+    if (all) delete all[id];
+  }
+
+  function resetAll() {
+    if (App.state) App.state.coachOverrides = {};
   }
 
   function packageState(pkg) {
@@ -191,6 +312,12 @@
 
   function packageTitle(key) {
     return PACKAGE_TITLES[key] || key;
+  }
+
+  // Родительный падеж нужен подписям полей редактора: два поля «Объём пакета»
+  // подряд читались бы одинаково, а скринридер их не различит.
+  function packageGenitive(key) {
+    return PACKAGE_GENITIVE[key] || key;
   }
 
   function normalize(value) {
@@ -235,7 +362,9 @@
       to,
       target,
       left,
-      percent: Math.round(done),
+      // Явный выход за цель (например, целью сделали вес больше текущего, но
+      // меньше стартового) не должен рисовать полосу длиннее 100 %.
+      percent: Math.max(0, Math.min(100, Math.round(done))),
       direction: target < from ? "down" : "up",
     };
   }
@@ -259,9 +388,22 @@
   App.coach = {
     clients,
     find,
+    draft,
+    validate,
+    apply,
+    hasOverrides,
+    reset,
+    resetAll,
+    limits: {
+      weightMin: WEIGHT_MIN,
+      weightMax: WEIGHT_MAX,
+      noteMax: NOTE_MAX,
+      packageMax: PACKAGE_MAX,
+    },
     packageState,
     packageLabel,
     packageTitle,
+    packageGenitive,
     packageKeys: PACKAGE_KEYS,
     filters: FILTERS,
     match,

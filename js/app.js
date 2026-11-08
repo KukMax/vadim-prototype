@@ -88,6 +88,12 @@
     const view = App.views[route];
     const screen = document.getElementById(SCREEN_IDS[route]);
     if (!view || !screen) return;
+    // Уход из карточки клиента бросает черновик редактора: возвращаться к нему
+    // после другого экрана нечего, а правки в памяти остаются как есть.
+    if (route !== "coach-client" && App.state && App.state.coachMode === "edit") {
+      App.state.coachMode = "view";
+      App.state.coachDraft = null;
+    }
     // Правка анкеты живёт только внутри экрана онбординга: уход на другой
     // экран без сохранения отменяет черновик, чтобы режим правки не «залипал».
     if (route !== "onboarding" && App.onboarding.isEditing()) App.onboarding.cancelEdit();
@@ -1784,7 +1790,138 @@
     const client = App.coach.find(id);
     if (!client) return;
     STATE.coachClientId = client.id;
+    // Карточка всегда открывается в просмотре: чужой черновик редактора
+    // не переезжает на другого клиента.
+    STATE.coachMode = "view";
+    STATE.coachDraft = null;
     go("coach-client");
+  }
+
+  // Режим карточки и черновик редактора — только в памяти: правки не попадают
+  // ни в storage, ни в URL и исчезают после перезагрузки.
+  function setCoachMode(mode) {
+    if (mode === "edit") {
+      const client = coachClient();
+      if (!client) return;
+      STATE.coachMode = "edit";
+      STATE.coachDraft = App.coach.draft(client);
+      render("coach-client", { static: true, focusKey: "coach-target-weight" });
+      return;
+    }
+    // Возврат в просмотр и отмена ничего не сохраняют.
+    STATE.coachMode = "view";
+    STATE.coachDraft = null;
+    render("coach-client", {
+      static: true,
+      focusKey: mode === "cancel" ? "coach-mode-edit" : "coach-mode-view",
+    });
+  }
+
+  function coachFieldNode(field) {
+    return document.querySelector('[data-coach-field="' + String(field) + '"]');
+  }
+
+  function coachFieldError(field, message) {
+    const input = coachFieldNode(field);
+    if (!input) return;
+    const holder = input.closest(".coach-field") || input.parentElement;
+    let box = holder ? holder.querySelector('[data-coach-error="' + field + '"]') : null;
+    if (!message) {
+      if (box) box.remove();
+      input.removeAttribute("aria-invalid");
+      input.removeAttribute("aria-describedby");
+      return;
+    }
+    if (!box && holder) {
+      box = document.createElement("p");
+      box.className = "coach-error";
+      box.id = "coach-error-" + field;
+      box.setAttribute("role", "alert");
+      box.setAttribute("data-coach-error", field);
+      holder.appendChild(box);
+    }
+    if (!box) return;
+    box.innerHTML = '<span class="coach-error-icon" aria-hidden="true">!</span>' + escapeHtml(message);
+    input.setAttribute("aria-invalid", "true");
+    input.setAttribute("aria-describedby", box.id);
+  }
+
+  const COACH_FIELDS = ["targetWeight", "note", "trainingTotal", "nutritionTotal"];
+
+  function showCoachErrors(check) {
+    COACH_FIELDS.forEach((field) => coachFieldError(field, check.errors[field] || ""));
+    const first = COACH_FIELDS.filter((field) => check.errors[field])[0];
+    if (!first) return;
+    const input = coachFieldNode(first);
+    if (!input) return;
+    // Фокус ставим на месте: повторный рендер потерял бы каретку в поле.
+    input.focus({ preventScroll: true });
+    if (typeof input.scrollIntoView === "function") {
+      input.scrollIntoView({ block: "center", behavior: "auto" });
+    }
+  }
+
+  function coachCounterText(note) {
+    return String(note || "").length + " / " + App.coach.limits.noteMax;
+  }
+
+  function sameCoachDraft(a, b) {
+    if (!a || !b) return false;
+    return (
+      a.targetWeight === b.targetWeight &&
+      a.note === b.note &&
+      a.trainingTotal === b.trainingTotal &&
+      a.nutritionTotal === b.nutritionTotal
+    );
+  }
+
+  // Кнопка сохранения активна только когда черновик отличается от исходных
+  // значений. Невалидный черновик проверяется при отправке: так ошибки видны
+  // под полями, а не спрятаны за неактивной кнопкой.
+  function syncCoachSave() {
+    const form = document.querySelector("[data-coach-form]");
+    const client = coachClient();
+    if (!form || !client || !STATE.coachDraft) return;
+    const button = form.querySelector('button[type="submit"]');
+    if (!button) return;
+    const same = sameCoachDraft(STATE.coachDraft, App.coach.draft(client));
+    button.disabled = same;
+    button.setAttribute("aria-disabled", String(same));
+    const bar = form.closest(".coach-savebar");
+    if (bar) bar.classList.toggle("is-dirty", !same);
+  }
+
+  function syncCoachField(field) {
+    if (!STATE.coachDraft) {
+      const client = coachClient();
+      if (!client) return;
+      STATE.coachDraft = App.coach.draft(client);
+    }
+    const input = coachFieldNode(field);
+    if (!input) return;
+    STATE.coachDraft[field] = input.value;
+    coachFieldError(field, "");
+    if (field === "note") {
+      const counter = document.querySelector("[data-coach-counter]");
+      if (counter) counter.textContent = coachCounterText(input.value);
+    }
+    syncCoachSave();
+  }
+
+  function submitCoachForm() {
+    const client = coachClient();
+    if (!client) return;
+    if (!STATE.coachDraft) STATE.coachDraft = App.coach.draft(client);
+    const check = App.coach.validate(client, STATE.coachDraft);
+    if (!check.ok) {
+      showCoachErrors(check);
+      return;
+    }
+    App.coach.apply(client.id, STATE.coachDraft);
+    STATE.coachMode = "view";
+    STATE.coachDraft = null;
+    toast("Сохранено. Правки действуют до перезагрузки");
+    render("coach-client", { static: true, focusKey: "coach-client-title" });
   }
 
   /* ---------- actions ---------- */
@@ -2088,6 +2225,23 @@
       case "open-coach-client":
         openCoachClient(trigger.dataset.client);
         break;
+      case "coach-mode":
+        setCoachMode(trigger.dataset.mode);
+        break;
+      case "coach-cancel":
+        setCoachMode("cancel");
+        break;
+      case "coach-reset": {
+        const clientId = trigger.dataset.client;
+        if (clientId) App.coach.reset(clientId);
+        else App.coach.resetAll();
+        if (STATE.coachMode === "edit") STATE.coachMode = "view";
+        STATE.coachDraft = null;
+        if (clientId) render("coach-client", { static: true, focusKey: "coach-mode-view" });
+        else render("coach", { static: true });
+        toast("Правки сброшены");
+        break;
+      }
       case "legal":
         legalSheet(trigger.dataset.legal);
         break;
@@ -2245,6 +2399,15 @@
       applyCoachQuery(target.value);
       return;
     }
+    // Поля редактора обновляют только черновик: без перерисовки, чтобы не
+    // терять каретку; ошибки поля гасятся, кнопка сохранения пересчитывается.
+    if (
+      (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) &&
+      target.hasAttribute("data-coach-field")
+    ) {
+      syncCoachField(target.dataset.coachField);
+      return;
+    }
     if (target instanceof HTMLElement && target.id === "onboarding-allergies") {
       STATE.onboarding.data.allergies = target.value;
       setFoodError("onboarding-allergies-error", "");
@@ -2330,6 +2493,11 @@
   document.addEventListener("submit", (event) => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
+    if (form.hasAttribute("data-coach-form")) {
+      event.preventDefault();
+      submitCoachForm();
+      return;
+    }
     if (PUBLIC_FORMS.indexOf(form.dataset.form) !== -1) {
       event.preventDefault();
       if (form.dataset.form === "login") submitLogin(form);

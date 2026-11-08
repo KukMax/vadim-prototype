@@ -2,12 +2,19 @@
    только фикстуры js/coach.js: карточка не читает ни состояние клиента, ни
    план, ни калории. Выбранный клиент лежит в памяти (STATE.coachClientId) и в
    URL не попадает. Анкета — медицинские данные: только вывод в разметку, без
-   логов и storage. */
+   логов и storage.
+
+   Режим «Просмотр | Редактор»: тренер правит целевой вес, заметку и объёмы
+   пакетов. Правки складываются в STATE.coachOverrides и живут до перезагрузки:
+   localStorage, URL и фикстуры js/coach.js не трогаются. Анкета, тренировки,
+   питание и прогресс остаются только для чтения. */
 (function (App) {
   "use strict";
 
   const { escapeHtml, icon, num, percent, plural, weight } = App.util;
   App.views = App.views || {};
+
+  const LIMITS = App.coach.limits;
 
   // Вес без хвостового «,0»: «92», но «86,4».
   function kg(value) {
@@ -31,6 +38,20 @@
     return `<a class="coach-back" href="#/coach" data-nav="coach" data-focus="coach-back">${icon("chevron-left")}<span>Все клиенты</span></a>`;
   }
 
+  // Сегментированный переключатель режима: две кнопки, каждая не ниже 44px.
+  function modeToggle() {
+    const editing = App.state.coachMode === "edit";
+    const button = (mode, label, focus) => {
+      const on = editing === (mode === "edit");
+      return `<button class="coach-mode-btn${on ? " is-on" : ""}" type="button" data-action="coach-mode" data-mode="${mode}" data-focus="${focus}" aria-pressed="${on ? "true" : "false"}">${label}</button>`;
+    };
+    return `
+      <div class="coach-mode" role="group" aria-label="Режим карточки">
+        ${button("view", "Просмотр", "coach-mode-view")}
+        ${button("edit", "Редактор", "coach-mode-edit")}
+      </div>`;
+  }
+
   function cardHead(client) {
     const demo = client.isDemo
       ? `<p class="coach-demo">Демо-клиент: данные совпадают с демо-кабинетом</p>`
@@ -45,10 +66,46 @@
           ${demo}
           <p class="coach-seen">${escapeHtml(App.coach.lastSeenLabel(client))}</p>
         </div>
+        ${modeToggle()}
       </header>`;
   }
 
-  function goalBlock(client) {
+  // Редактор веса: числа и полоса слева остаются от сохранённых значений,
+  // меняется только поле цели. Пересчёт — после сохранения.
+  function goalEditBlock(client, draft) {
+    const delta = App.coach.weightDelta(client);
+    const bar =
+      delta.percent === null
+        ? ""
+        : `<div class="progress-track coach-progress" role="progressbar" aria-label="Прогресс к цели" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${delta.percent}" aria-valuetext="пройдено ${delta.percent} %">
+          <span class="progress-fill" style="--progress:${delta.percent}%"></span>
+        </div>`;
+    return `
+      <section class="coach-goal-block coach-goal-block--edit card">
+        <h2 class="coach-block-title">Вес и цель</h2>
+        <div class="coach-goal-grid">
+          <span class="coach-goal-cell">
+            <span class="coach-goal-label">Старт</span>
+            <strong class="coach-goal-num">${kg(delta.from)}</strong>
+          </span>
+          <span class="coach-goal-arrow" aria-hidden="true">${icon("arrow-right")}</span>
+          <span class="coach-goal-cell">
+            <span class="coach-goal-label">Сейчас</span>
+            <strong class="coach-goal-num">${kg(delta.to)}</strong>
+          </span>
+          <span class="coach-goal-arrow" aria-hidden="true">${icon("arrow-right")}</span>
+          <span class="coach-field coach-goal-cell">
+            <label class="coach-field-label" for="coach-target-weight">Целевой вес, кг</label>
+            <input class="coach-input coach-input--num" id="coach-target-weight" type="number" min="${LIMITS.weightMin}" max="${LIMITS.weightMax}" step="0.1" inputmode="decimal" autocomplete="off" value="${escapeHtml(draft.targetWeight)}" data-coach-field="targetWeight" data-focus="coach-target-weight">
+          </span>
+        </div>
+        ${bar}
+        <p class="coach-goal-caption">Прогресс и статусы пакетов пересчитаются после сохранения.</p>
+      </section>`;
+  }
+
+  function goalBlock(client, draft) {
+    if (draft) return goalEditBlock(client, draft);
     const delta = App.coach.weightDelta(client);
     if (delta.direction === "none") {
       return `
@@ -84,11 +141,19 @@
       </section>`;
   }
 
-  function packageRow(client, key) {
+  function packageRow(client, key, draft) {
     const pkg = client.packages[key];
     const state = App.coach.packageState(pkg);
     const done = Math.min(pkg.used, pkg.total);
     const when = pkg.startedDaysAgo === null ? "" : `активирован ${ago(pkg.startedDaysAgo)}`;
+    const field = draft
+      ? `
+        <span class="coach-field coach-package-edit">
+          <label class="coach-field-label" for="coach-${key}-total">Объём пакета ${escapeHtml(App.coach.packageGenitive(key))}</label>
+          <input class="coach-input coach-input--num" id="coach-${key}-total" type="number" min="0" max="${LIMITS.packageMax[key]}" step="1" inputmode="numeric" autocomplete="off" value="${escapeHtml(draft[key + "Total"])}" data-coach-field="${key}Total" data-focus="coach-${key}-total">
+          <span class="coach-hint">израсходовано ${pkg.used} из ${pkg.total}</span>
+        </span>`
+      : "";
     return `
       <li class="coach-package coach-package--${state}">
         <span class="coach-package-top">
@@ -100,15 +165,16 @@
           <span class="coach-package-note">${escapeHtml(App.coach.packageLabel(pkg))}</span>
           <span class="coach-package-when">${escapeHtml(when)}</span>
         </span>
+        ${field}
       </li>`;
   }
 
-  function packagesBlock(client) {
+  function packagesBlock(client, draft) {
     return `
       <section class="coach-section card">
         <h2 class="coach-block-title">Пакеты</h2>
         <ul class="coach-packages">
-          ${App.coach.packageKeys.map((key) => packageRow(client, key)).join("")}
+          ${App.coach.packageKeys.map((key) => packageRow(client, key, draft)).join("")}
         </ul>
       </section>`;
   }
@@ -168,12 +234,26 @@
       </section>`;
   }
 
-  function noteBlock(client) {
+  function noteCounter(note) {
+    return String(note || "").length + " / " + LIMITS.noteMax;
+  }
+
+  function noteBlock(client, draft) {
+    if (draft) {
+      return `
+      <section class="coach-note card">
+        <h2 class="coach-block-title">Заметка Вадима</h2>
+        <div class="coach-field">
+          <label class="coach-field-label" for="coach-note">Заметка</label>
+          <textarea class="coach-input coach-textarea" id="coach-note" rows="4" data-coach-field="note" data-focus="coach-note">${escapeHtml(draft.note)}</textarea>
+          <span class="coach-hint coach-counter" data-coach-counter aria-live="polite">${noteCounter(draft.note)}</span>
+        </div>
+      </section>`;
+    }
     return `
       <section class="coach-note card">
         <h2 class="coach-block-title">Заметка Вадима</h2>
         <p class="coach-note-text">${escapeHtml(client.note)}</p>
-        <p class="coach-note-caption">Редактирование появится позже</p>
       </section>`;
   }
 
@@ -187,6 +267,26 @@
       </div>`;
   }
 
+  // Пометка в режиме просмотра: правки есть, но живут только в памяти.
+  function overridesBlock(client) {
+    if (!App.coach.hasOverrides(client.id)) return "";
+    return `
+      <p class="coach-dirty">
+        <span class="coach-dirty-text">Есть правки — до перезагрузки</span>
+        <button class="coach-reset" type="button" data-action="coach-reset" data-client="${escapeHtml(client.id)}" data-focus="coach-reset">Сбросить правки</button>
+      </p>`;
+  }
+
+  // Липкая панель редактора. Кнопка «Сохранить» включает app.js, когда черновик
+  // расходится с сохранёнными значениями.
+  function saveBar() {
+    return `
+      <form class="coach-savebar" data-coach-form novalidate>
+        <button class="btn btn--ghost" type="button" data-action="coach-cancel" data-focus="coach-cancel">Отмена</button>
+        <button class="btn btn--primary" type="submit" disabled aria-disabled="true">Сохранить</button>
+      </form>`;
+  }
+
   function coachClientView() {
     const client = App.coach.find(App.state.coachClientId);
     // guardRoute() уже увёл бы без выбранного клиента в список; ветка — только
@@ -194,19 +294,31 @@
     if (!client) {
       return `<div class="coach">${backLink()}<p class="coach-lead">Клиент не выбран.</p></div>`;
     }
+    const editing = App.state.coachMode === "edit";
+    let draft = editing ? App.state.coachDraft : null;
+    if (editing && !draft) {
+      draft = App.coach.draft(client);
+      App.state.coachDraft = draft;
+    }
+    const banner = editing
+      ? `<p class="coach-mode-banner" role="status">Режим редактора. Правки хранятся в памяти и исчезнут после перезагрузки.</p>`
+      : "";
     return `
     <div class="coach coach-client-page">
       ${backLink()}
       ${cardHead(client)}
-      ${goalBlock(client)}
-      ${packagesBlock(client)}
+      ${banner}
+      ${goalBlock(client, draft)}
+      ${packagesBlock(client, draft)}
       ${factsBlock(client)}
       <div class="coach-blocks">
         ${trainingBlock(client)}
         ${nutritionBlock(client)}
       </div>
-      ${noteBlock(client)}
+      ${noteBlock(client, draft)}
+      ${editing ? "" : overridesBlock(client)}
       ${actionsBlock()}
+      ${editing ? saveBar() : ""}
     </div>`;
   }
 

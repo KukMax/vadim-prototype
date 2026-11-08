@@ -41,8 +41,12 @@ body[data-shell="coach"] .toast { bottom: calc(24px + env(safe-area-inset-bottom
 .coach-chip:active { transform: scale(.97); }
 
 /* --- список клиентов --- */
-.coach-list { display: grid; gap: 12px; }
-.coach-client { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+.coach-list { display: grid; gap: 16px; }
+/* Карточка — отдельная поверхность: граница + мягкая тень, чтобы список
+   не читался одной плитой. В тёмной теме --shadow = none, поэтому тень
+   задаём здесь, но очень мягкую. */
+.coach-client { display: flex; flex-direction: column; gap: 12px; padding: 14px; background-color: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+:root[data-theme="dark"] .coach-client { box-shadow: 0 1px 2px rgba(0, 0, 0, .20), 0 10px 26px rgba(0, 0, 0, .12); }
 .coach-client-head { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
 .coach-client-id { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
 .coach-avatar { display: grid; place-items: center; flex: none; width: 44px; height: 44px; color: var(--avatar-text); background: var(--avatar-bg); border-radius: 50%; font-size: 17px; font-weight: 750; line-height: 1; }
@@ -52,7 +56,7 @@ body[data-shell="coach"] .toast { bottom: calc(24px + env(safe-area-inset-bottom
 .coach-goal { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* --- пакеты и прогресс --- */
-.coach-packages { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.coach-packages { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
 .coach-package { display: grid; gap: 5px; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .coach-package-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .coach-package-name { color: var(--muted); font-size: 12.5px; font-weight: 650; }
@@ -67,7 +71,7 @@ body[data-shell="coach"] .toast { bottom: calc(24px + env(safe-area-inset-bottom
 .coach-package--inactive .coach-package-frac { color: var(--muted-2); }
 
 /* --- подвал карточки --- */
-.coach-client-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.coach-client-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px solid var(--border); }
 .coach-seen { color: var(--muted-2); font-size: 12px; line-height: 1.3; }
 .coach-open { display: inline-flex; align-items: center; gap: 4px; flex: none; min-height: 44px; padding: 0 12px 0 16px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; transition: border-color .2s ease-out, background-color .2s ease-out; }
 .coach-open .icon { width: 15px; height: 15px; color: var(--muted); }
@@ -85,8 +89,10 @@ body[data-shell="coach"] .toast { bottom: calc(24px + env(safe-area-inset-bottom
 .coach-back:active { transform: scale(.97); }
 .coach-back:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 
-.coach-card-head { display: flex; align-items: flex-start; gap: 14px; }
-.coach-card-id { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; }
+/* Переключатель «Просмотр | Редактор» — справа от имени, но переносится
+   отдельной строкой, если места мало (320 px). */
+.coach-card-head { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 10px 14px; }
+.coach-card-id { display: flex; flex: 1 1 160px; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; }
 .coach-demo { color: var(--muted-2); font-size: 11.5px; line-height: 1.4; }
 
 .coach-section,
@@ -126,6 +132,44 @@ body[data-shell="coach"] .toast { bottom: calc(24px + env(safe-area-inset-bottom
 .coach-actions { display: grid; gap: 8px; }
 .coach-actions .btn { width: 100%; }
 
+/* --- режим карточки: просмотр / редактор --- */
+.coach-mode { display: flex; flex: none; gap: 3px; margin-left: auto; padding: 3px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; }
+.coach-mode-btn { min-height: 44px; padding: 0 14px; color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 650; background: none; border: 0; border-radius: 999px; cursor: pointer; transition: color .2s ease-out, background-color .2s ease-out; }
+.coach-mode-btn.is-on { color: var(--on-accent); background: var(--accent); }
+.coach-mode-btn.is-on:focus-visible { outline-color: var(--text); }
+
+.coach-mode-banner { margin: 0; padding: 10px 12px; color: var(--accent-text); font-size: 12.5px; line-height: 1.45; background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 12px; }
+
+/* Поля редактора: те же поверхности, что у остальных инпутов кабинета. */
+.coach-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.coach-field-label { color: var(--muted-2); font-size: 10.5px; font-weight: 700; letter-spacing: .05em; line-height: 1.3; text-transform: uppercase; }
+.coach-input { width: 100%; min-width: 0; min-height: 44px; padding: 9px 11px; color: var(--text); font: inherit; font-size: 15px; font-weight: 650; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; outline: none; transition: border-color .2s ease-out, background-color .2s ease-out, box-shadow .2s ease-out; }
+.coach-input:focus { border-color: var(--accent-line); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-soft); }
+.coach-input[aria-invalid="true"] { border-color: var(--accent-line); background: var(--accent-soft); }
+.coach-input--num { font-variant-numeric: tabular-nums; }
+.coach-textarea { min-height: 104px; font-weight: 500; line-height: 1.45; resize: vertical; }
+.coach-hint { color: var(--muted-2); font-size: 11.5px; line-height: 1.4; }
+.coach-counter { align-self: flex-end; font-variant-numeric: tabular-nums; }
+
+.coach-error { display: flex; align-items: flex-start; gap: 6px; margin: 0; padding: 7px 9px; color: var(--accent-text); font-size: 12px; line-height: 1.4; background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 9px; }
+.coach-error-icon { display: inline-grid; place-items: center; flex: none; width: 16px; height: 16px; margin-top: 1px; color: var(--on-accent); background: var(--accent); border-radius: 50%; font-size: 11px; font-weight: 800; line-height: 1; }
+
+/* В редакторе поле веса встаёт третьей колонкой той же строки. */
+.coach-goal-grid .coach-field { flex: 1 1 104px; }
+.coach-goal-block .coach-error { margin-top: 2px; }
+
+.coach-package-edit { margin-top: 1px; padding-top: 9px; border-top: 1px dashed var(--border-strong); }
+.coach-package-edit .coach-input { min-height: 42px; }
+
+.coach-dirty { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; margin: 0; padding: 6px 8px 6px 12px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; font-size: 12.5px; line-height: 1.4; }
+.coach-dirty-text { flex: 1 1 auto; }
+.coach-reset { flex: none; min-height: 44px; margin-left: auto; padding: 0 14px; color: var(--accent-text); font: inherit; font-size: 12.5px; font-weight: 700; background: none; border: 1px solid var(--accent-line); border-radius: 999px; cursor: pointer; transition: background-color .2s ease-out, border-color .2s ease-out; }
+
+.coach-savebar { position: sticky; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 3; display: flex; gap: 8px; margin-top: 2px; padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--float-shadow); }
+.coach-savebar .btn { flex: 1 1 0; min-height: 44px; }
+.coach-savebar .btn--primary { flex: 1.4 1 0; }
+.coach-savebar.is-dirty { border-color: var(--accent-line); }
+
 @media (min-width: 520px) {
   .coach-blocks { grid-template-columns: 1fr 1fr; align-items: start; }
   .coach-facts { grid-template-columns: 1fr 1fr; }
@@ -137,7 +181,12 @@ body[data-shell="coach"] .toast { bottom: calc(24px + env(safe-area-inset-bottom
   .coach-exit span { display: none; }
   .coach-exit { padding: 0 10px; }
   .coach-client { padding: 12px; }
+  .coach-list { gap: 14px; }
   .coach-card-head { gap: 10px; }
+  .coach-mode { order: 3; width: 100%; margin-left: 0; }
+  .coach-mode-btn { flex: 1 1 0; }
+  .coach-goal-block--edit .coach-goal-grid { flex-wrap: wrap; row-gap: 10px; }
+  .coach-goal-block--edit .coach-goal-arrow { display: none; }
   .coach-avatar--lg { width: 48px; height: 48px; font-size: 18px; }
   .coach-goal-num { font-size: 21px; }
 }
@@ -146,7 +195,10 @@ body[data-shell="coach"] .toast { bottom: calc(24px + env(safe-area-inset-bottom
   .coach-exit,
   .coach-chip,
   .coach-back,
-  .coach-open { transition: none; }
+  .coach-open,
+  .coach-mode-btn,
+  .coach-input,
+  .coach-reset { transition: none; }
   .coach-exit:active,
   .coach-chip:active,
   .coach-back:active,
