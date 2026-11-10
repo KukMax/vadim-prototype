@@ -146,5 +146,86 @@
     };
   }
 
-  App.calories = { bmr, tdee, adjustPercent, target, fromQuestionnaire, explain };
+  // Стартовые граммы на килограмм массы тела: белок зависит от цели, жир
+  // стабилен, углеводы добираются остатком калорийности. Всё это тренер
+  // потом правит руками — коэффициенты лишь разумная отправная точка.
+  const MACRO_COEFS = {
+    lose: { protein: 1.6, fat: 0.9 },
+    maintain: { protein: 1.4, fat: 0.9 },
+    gain: { protein: 1.8, fat: 0.9 },
+  };
+  const DEFAULT_COEFS = { protein: 1.4, fat: 0.9 };
+
+  function gramsFromPercents(kcal, percents) {
+    const value = numberOr(kcal, 0);
+    const part = (percent, divisor) => Math.max(0, Math.round((value * numberOr(percent, 0)) / 100 / divisor));
+    return { protein: part(percents.protein, 4), fat: part(percents.fat, 9), carbs: part(percents.carbs, 4) };
+  }
+
+  // Из граммов — калорийность по 4/9/4, доли и граммы на кг. Проценты
+  // нормируются на сумму БЖУ и всегда дают ровно 100.
+  function compose(grams, weight) {
+    const protein = Math.max(0, Math.round(numberOr(grams.protein, 0)));
+    const fat = Math.max(0, Math.round(numberOr(grams.fat, 0)));
+    const carbs = Math.max(0, Math.round(numberOr(grams.carbs, 0)));
+    const macroKcal = 4 * protein + 9 * fat + 4 * carbs;
+    const share = (value) => (macroKcal > 0 ? Math.round((value / macroKcal) * 100) : 0);
+    const proteinPercent = share(4 * protein);
+    const fatPercent = share(9 * fat);
+    const perKg = (value) => (numberOr(weight, 0) > 0 ? Math.round((value / weight) * 100) / 100 : 0);
+    return {
+      grams: { protein, fat, carbs },
+      percents: { protein: proteinPercent, fat: fatPercent, carbs: Math.max(0, 100 - proteinPercent - fatPercent) },
+      perKg: { protein: perKg(protein), fat: perKg(fat), carbs: perKg(carbs) },
+      macroKcal,
+    };
+  }
+
+  // Готовая норма по входу формулы: калорийность (или заданная) + граммы по
+  // коэффициентам цели. Углеводы — остаток калорийности, поэтому сумма БЖУ
+  // почти совпадает с калорийностью (расхождение только от округления).
+  function planFor(data, kcal) {
+    const item = data || input();
+    const target = numberOr(kcal, 0) > 0
+      ? Math.round(kcal)
+      : roundDown(tdee(item) * (1 + adjustPercent(item) / 100));
+    const coef = MACRO_COEFS[item.goal] || DEFAULT_COEFS;
+    const protein = Math.round(coef.protein * item.weight);
+    const fat = Math.round(coef.fat * item.weight);
+    const carbs = Math.max(0, Math.round((target - 4 * protein - 9 * fat) / 4));
+    const set = compose({ protein, fat, carbs }, item.weight);
+    return { kcal: target, weight: item.weight, grams: set.grams, percents: set.percents, perKg: set.perKg, macroKcal: set.macroKcal };
+  }
+
+  // Норма БЖУ клиента. Без заполненной анкеты — null, и экраны остаются на
+  // статических DATA.targets (важно для #/demo: 2100 / 160 / 65 / 220).
+  function macroTargets() {
+    const item = fromQuestionnaire();
+    if (!item) return null;
+    const plan = planFor(item, target());
+    return {
+      kcal: plan.kcal,
+      protein: plan.grams.protein,
+      fat: plan.grams.fat,
+      carbs: plan.grams.carbs,
+      percents: plan.percents,
+      perKg: plan.perKg,
+      macroKcal: plan.macroKcal,
+      weight: plan.weight,
+    };
+  }
+
+  App.calories = {
+    bmr,
+    tdee,
+    adjustPercent,
+    target,
+    fromQuestionnaire,
+    explain,
+    macroCoefs: MACRO_COEFS,
+    compose,
+    gramsFromPercents,
+    planFor,
+    macroTargets,
+  };
 })(window.App = window.App || {});

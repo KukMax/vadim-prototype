@@ -204,3 +204,618 @@ body[data-shell="coach"] .toast { bottom: calc(24px + env(safe-area-inset-bottom
   .coach-back:active,
   .coach-open:active { transform: none; }
 }
+
+/* --- тренировочный день: шапка и таблица просмотра --- */
+.coach-training-page { gap: 12px; }
+.coach-day-head { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.coach-day-head .coach-title { margin: 0; }
+.coach-day-head .coach-mode { margin: 7px 0 0; }
+.coach-client-line { margin: 0; color: var(--muted); font-size: 12.5px; font-weight: 650; line-height: 1.35; }
+.coach-client-meta { margin: 0; color: var(--muted-2); font-size: 12.5px; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.coach-day-title { width: 100%; }
+
+/* До 720 px таблица превращается в карточки: на телефоне семь колонок
+   нечитаемы, а data-label в разметке даёт подписи без дублирования данных. */
+.coach-table-wrap { margin: 0; }
+.coach-ex-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.coach-ex-table thead { display: none; }
+.coach-ex-table tbody { display: grid; gap: 8px; }
+.coach-ex-table tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 12px; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; }
+.coach-ex-table td { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; padding: 1px 0; color: var(--text); font-size: 13px; line-height: 1.4; text-align: right; overflow-wrap: anywhere; }
+.coach-ex-table td::before { content: attr(data-label); flex: none; color: var(--muted-2); font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-align: left; text-transform: uppercase; }
+.coach-ex-table td:nth-child(2) { grid-column: 1 / -1; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; }
+.coach-ex-table td:nth-child(2)::before { content: none; }
+.coach-ex-num { color: var(--muted-2); }
+.coach-ex-name { color: var(--text); font-size: 14px; font-weight: 650; line-height: 1.35; }
+.coach-ex-muscle { display: block; color: var(--muted-2); font-size: 11.5px; line-height: 1.3; }
+.coach-ex-note { display: block; margin-top: 2px; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+
+/* --- тренировочный день: редактор --- */
+.coach-edit-list { display: grid; gap: 10px; }
+.coach-edit-row { display: flex; flex-direction: column; gap: 9px; padding: 11px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; }
+.coach-edit-head { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 8px 9px; }
+.coach-edit-num { display: grid; place-items: center; flex: none; width: 24px; height: 24px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 50%; font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.coach-edit-id { flex: 1 1 130px; min-width: 0; }
+.coach-edit-name { margin: 0; color: var(--text); font-size: 14px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.coach-edit-meta { margin: 1px 0 0; color: var(--muted-2); font-size: 11.5px; line-height: 1.35; overflow-wrap: anywhere; }
+.coach-edit-tools { display: flex; flex: none; flex-wrap: wrap; gap: 2px; justify-content: flex-end; margin-left: auto; margin-top: -6px; margin-right: -6px; margin-bottom: -6px; }
+
+.coach-icon-btn { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--muted); font: inherit; background: none; border: 1px solid transparent; border-radius: 11px; cursor: pointer; transition: color .2s ease-out, background-color .2s ease-out, border-color .2s ease-out; }
+.coach-icon-btn .icon { width: 16px; height: 16px; }
+.coach-icon-btn:hover { color: var(--text); background: var(--surface); border-color: var(--border); }
+.coach-icon-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.coach-icon-btn:disabled { color: var(--muted-2); background: none; border-color: transparent; cursor: default; opacity: .45; }
+.coach-icon-btn--danger { color: var(--accent-text); }
+
+.coach-edit-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.coach-day-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.coach-day-field .coach-error { margin-top: 1px; }
+.coach-day-errors { display: grid; gap: 6px; }
+.coach-day-errors:empty { display: none; }
+
+/* --- выбор упражнения --- */
+.coach-picker { position: relative; }
+.coach-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.coach-picker-groups { display: flex; flex-wrap: wrap; gap: 6px; row-gap: 6px; margin: 0; padding: 0; overflow-x: visible; scrollbar-width: auto; }
+.coach-picker-chip { min-height: 40px; font-size: 12.5px; }
+.coach-picker-results { display: grid; gap: 6px; max-height: min(58vh, 420px); margin: 0; padding: 1px; overflow-y: auto; list-style: none; }
+.coach-picker-item { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 11px; }
+.coach-picker-item[hidden] { display: none; }
+.coach-picker-text { display: flex; flex: 1 1 auto; flex-direction: column; gap: 1px; min-width: 0; }
+.coach-picker-name { color: var(--text); font-size: 13px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+.coach-picker-meta { color: var(--muted-2); font-size: 11px; line-height: 1.3; overflow-wrap: anywhere; }
+.coach-picker-add { flex: none; min-height: 44px; padding: 0 13px; color: var(--accent-text); font: inherit; font-size: 12.5px; font-weight: 700; background: none; border: 1px solid var(--accent-line); border-radius: 999px; cursor: pointer; transition: background-color .2s ease-out, border-color .2s ease-out; }
+.coach-picker-add:hover { background: var(--accent-soft); }
+.coach-picker-add:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.coach-picker-empty { align-self: start; margin: 0; padding: 10px 12px; color: var(--muted); font-size: 12.5px; line-height: 1.4; background: var(--surface-2); border: 1px dashed var(--border); border-radius: 11px; }
+
+/* --- дни программы в карточке клиента --- */
+.coach-program { display: flex; flex-direction: column; gap: 8px; padding-top: 11px; border-top: 1px dashed var(--border-strong); }
+.coach-program-head { margin: 0; color: var(--muted-2); font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.coach-program-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.coach-program-day { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 52px; padding: 7px 8px 7px 11px; color: var(--text); font: inherit; text-align: left; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; transition: border-color .2s ease-out, background-color .2s ease-out; }
+.coach-program-day:hover { border-color: var(--border-strong); background: var(--surface); }
+.coach-program-day:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.coach-program-day:active { transform: scale(.99); }
+.coach-program-key { display: grid; place-items: center; flex: none; width: 26px; height: 26px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 50%; font-size: 11.5px; font-weight: 700; }
+.coach-program-text { display: flex; flex: 1 1 auto; flex-direction: column; gap: 1px; min-width: 0; }
+.coach-program-name { color: var(--text); font-size: 13.5px; font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; }
+.coach-program-meta { color: var(--muted-2); font-size: 11.5px; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.coach-program-day > .icon { flex: none; width: 16px; height: 16px; color: var(--muted-2); }
+.coach-program .coach-reset { align-self: flex-start; margin-left: 0; }
+
+/* --- экран программы #/coach-program: дни, поля, итог --- */
+.coach-program-page { gap: 12px; }
+.coach-program-days { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.coach-program-days .coach-program-day { flex-direction: row; align-items: center; gap: 9px; padding: 8px 9px 8px 11px; cursor: default; }
+.coach-program-days .coach-program-day:hover { border-color: var(--border); background: var(--surface-2); }
+.coach-program-days .coach-program-day:active { transform: none; }
+.coach-program-days--edit .coach-program-day { flex-direction: column; align-items: stretch; gap: 9px; padding: 10px 11px; }
+.coach-program-day-head { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.coach-program-day-head .coach-program-meta { margin: 0; }
+.coach-program-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.coach-program-field .coach-error { margin-top: 1px; }
+.coach-program-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+/* Итог пересчёта: заметная строка «4 дня × 3 круга = 12 тренировок · 30 дней». */
+.coach-program-total { margin: 0; padding: 9px 11px; color: var(--text); font-size: 13.5px; font-weight: 700; line-height: 1.4; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
+.coach-program-errors { display: grid; gap: 6px; }
+.coach-program-errors:empty { display: none; }
+.coach-program-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.coach-program-tools .coach-icon-btn { flex: none; }
+.coach-program-tools .coach-program-open { flex: 1 1 88px; }
+.coach-program-add { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 44px; }
+.coach-program-add .icon { width: 16px; height: 16px; }
+/* Кнопка «Открыть» — пилюля в тон акцента, как у выбора упражнений. */
+.coach-program-open { flex: none; min-height: 44px; padding: 0 13px; color: var(--accent-text); font: inherit; font-size: 12.5px; font-weight: 700; background: none; border: 1px solid var(--accent-line); border-radius: 999px; cursor: pointer; transition: background-color .2s ease-out, border-color .2s ease-out; }
+.coach-program-open:hover { background: var(--accent-soft); }
+.coach-program-open:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.coach-program-remove { flex: none; margin-left: auto; }
+.coach-program-remove:disabled { color: var(--muted-2); border-color: var(--border); cursor: default; opacity: .55; }
+
+@media (max-width: 359px) {
+  .coach-edit-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .coach-edit-tools { margin-right: 0; }
+  .coach-picker-item { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .coach-picker-add { width: 100%; }
+  .coach-program-key { display: none; }
+  /* На 320 px поля пакета — колонкой, кнопки дня занимают всю ширину. */
+  .coach-program-fields { grid-template-columns: minmax(0, 1fr); }
+  .coach-program-tools .coach-program-open { flex: 1 1 100%; }
+  .coach-program-remove { margin-left: 0; flex: 1 1 100%; }
+}
+
+/* На широком экране — настоящая таблица с семью колонками. */
+@media (min-width: 720px) {
+  .coach-table-wrap { overflow-x: auto; }
+  .coach-ex-table { display: table; min-width: 620px; }
+  .coach-ex-table thead { display: table-header-group; }
+  .coach-ex-table tbody { display: table-row-group; }
+  .coach-ex-table tr { display: table-row; padding: 0; background: none; border: 0; border-radius: 0; }
+  .coach-ex-table th { padding: 0 8px 8px; color: var(--muted-2); font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-align: left; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+  .coach-ex-table td { display: table-cell; padding: 10px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+  .coach-ex-table td::before { content: none; }
+  .coach-ex-table td:nth-child(2) { display: table-cell; }
+  .coach-ex-table tbody tr:last-child td { border-bottom: 0; }
+  .coach-ex-table th:first-child,
+  .coach-ex-table td:first-child { width: 30px; padding-left: 0; }
+  .coach-ex-table th:last-child,
+  .coach-ex-table td:last-child { padding-right: 0; }
+  .coach-ex-num { color: var(--muted-2); font-variant-numeric: tabular-nums; }
+  /* В табличной раскладке длинное название должно переноситься внутри ячейки. */
+  .coach-ex-table .coach-ex-name { overflow-wrap: anywhere; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coach-icon-btn,
+  .coach-picker-add,
+  .coach-program-day,
+  .coach-program-open { transition: none; }
+  .coach-program-day:active { transform: none; }
+}
+
+/* ==========================================================================
+   11H. Кабинет тренера на планшете и ПК.
+   Все правила ниже включаются только с 700 px; до 699 px включительно
+   работает ровно та же раскладка, что и раньше. Новые селекторы (toolbar,
+   head-title, колонки) в мобильной разметке либо прозрачны, либо скрыты.
+   ========================================================================== */
+
+/* --- оболочка: ширина страницы и тост --- */
+@media (min-width: 700px) {
+  body[data-shell="coach"] .page { max-width: 760px; padding: 22px 24px 40px; }
+  body[data-shell="coach"] .toast { bottom: 24px; }
+}
+
+@media (min-width: 1024px) {
+  body[data-shell="coach"] .page { max-width: 1180px; padding: 0 32px 56px; }
+  body[data-shell="coach"] .toast { right: 24px; left: auto; bottom: 24px; }
+}
+
+/* Шире 1180 px из макета: в редакторе рядом с библиотекой 340 px колонке
+   названия упражнения нужно минимум 220 px, иначе имена ломаются по слогам.
+   220 px набираются с 1360 px экрана — там страница и упирается в предел. */
+@media (min-width: 1280px) {
+  body[data-shell="coach"] .page { max-width: 1360px; }
+}
+
+/* --- шапка кабинета: липкая полоса с якорем «Клиенты» --- */
+.coach-head-title { display: none; }
+
+@media (min-width: 1024px) {
+  .coach-head {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    min-height: 64px;
+    margin: 0 -32px 8px;
+    padding: 0 32px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    -webkit-backdrop-filter: saturate(1.2) blur(8px);
+    backdrop-filter: saturate(1.2) blur(8px);
+  }
+
+  .coach-head-title {
+    display: inline-flex;
+    align-items: center;
+    padding-left: 12px;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    border-left: 1px solid var(--border);
+  }
+}
+
+/* Липкая шапка перекрывает верх экрана — якорям нужен отступ. */
+.coach-client-page,
+.coach-training,
+.coach-training-page,
+.coach-program,
+.coach-program-page { scroll-margin-top: 72px; }
+
+/* --- панель поиска и фильтров --- */
+/* На телефоне обёртка повторяет прежние отступы: 7 px внутри .coach-tools
+   и 16 px между .coach-tools и .coach-filters, как было у соседей в .coach. */
+.coach-toolbar { display: flex; flex-direction: column; gap: 16px; }
+
+@media (min-width: 1024px) {
+  .coach-toolbar { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 10px 12px; }
+  /* На ПК поиск, счётчик и фильтры — прямые дети строки: .coach-tools
+     перестаёт быть боксом и отдаёт их наружу, чтобы счётчик уехал вправо. */
+  .coach-toolbar .coach-tools { display: contents; }
+  .coach-toolbar .coach-search { order: 1; flex: 0 1 340px; min-width: 0; }
+  .coach-toolbar .coach-filters { order: 2; flex: 1 1 auto; flex-wrap: wrap; min-width: 0; padding-bottom: 0; overflow: visible; }
+  .coach-toolbar .coach-count { order: 3; margin-left: auto; white-space: nowrap; }
+}
+
+/* --- список клиентов: две и три колонки --- */
+@media (min-width: 700px) {
+  .coach-list { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+}
+
+@media (min-width: 1024px) {
+  .coach-empty { grid-column: 1 / -1; max-width: 520px; margin: 40px auto; }
+}
+
+@media (min-width: 1400px) {
+  .coach-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* --- курсор и наведение на ПК --- */
+.coach a,
+.coach button,
+.coach .btn { cursor: pointer; }
+.coach input,
+.coach textarea,
+.coach select { cursor: text; }
+.coach button:disabled { cursor: default; }
+
+/* :where() держит нулевую специфичность, чтобы не перебивать уже заданные
+   focus-visible у .coach-back, .coach-title и активного режима. */
+:where(.coach a, .coach button, .coach input, .coach textarea, .coach select, .coach [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .coach-chip:hover,
+  .coach-open:hover,
+  .coach-exit:hover,
+  .coach-back:hover,
+  .coach-day-row:hover,
+  .coach-mode button:hover:not(.is-on) {
+    background-color: var(--surface-2);
+    border-color: var(--border-strong);
+  }
+}
+
+/* --- 2.1. Карточка клиента: две колонки на ПК --- */
+/* Базовые обёртки повторяют прежнюю стопку: карточки остаются в том же
+   порядке и с теми же 12 px между собой, что и gap .coach-client-page. */
+.coach-client-top { display: flex; flex-direction: column; gap: 12px; }
+.coach-client-cols { display: flex; flex-direction: column; gap: 12px; }
+.coach-col { display: flex; flex-direction: column; gap: 12px; }
+
+/* С 700px «Анкета» разворачивается в три колонки (до 520px была одна, дальше две). */
+@media (min-width: 700px) {
+  .coach-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .coach-client-page { gap: 16px; }
+  .coach-client-top { flex-direction: row; align-items: flex-start; gap: 16px; }
+  .coach-client-top .coach-card-head { flex: 1 1 auto; align-items: center; }
+  .coach-client-cols { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .coach-client-cols .coach-col { gap: 12px; }
+  .coach-client-cols .coach-blocks { grid-template-columns: 1fr; }
+  .coach-client-page .coach-savebar { bottom: 16px; }
+}
+
+/* --- 2.2. Тренировка: широкая таблица и библиотека справа --- */
+/* Обёртка нужна только для сетки колонок; на телефоне это обычная стопка
+   с теми же 12 px между карточкой дня и библиотекой, что и gap .coach-training-page. */
+.coach-training { display: flex; flex-direction: column; gap: 12px; }
+.coach-training-main { min-width: 0; }
+
+@media (min-width: 1024px) {
+  /* Шапка дня: имя клиента строкой выше, ниже название, режим и итог в строку. */
+  .coach-day-head { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+  .coach-day-head .coach-client-line { flex: 1 0 100%; }
+  .coach-day-head .coach-day-title { order: 1; flex: 1 1 300px; width: auto; min-width: 0; }
+  .coach-day-head .coach-title { order: 1; flex: 1 1 300px; min-width: 0; margin: 0; }
+  .coach-day-head .coach-mode { order: 2; margin: 0; }
+  .coach-day-head .coach-client-meta { order: 3; margin-left: auto; text-align: right; white-space: nowrap; }
+
+  /* Просмотр: таблица на всю ширину колонки, шапка липнет под шапкой кабинета.
+     overflow снимаем: прокручиваемый контейнер сделал бы sticky-шапку
+     бесполезной — она цеплялась бы к нему, а не к окну. */
+  .coach-table-wrap { overflow: visible; }
+  /* Таблица занимает всю колонку: фиксированные ширины числовых колонок
+     забирают своё, остаток уходит в название упражнения. */
+  .coach-ex-table { width: 100%; min-width: 0; table-layout: fixed; }
+  .coach-ex-table th { position: sticky; top: 64px; z-index: 2; background: var(--surface); }
+  .coach-ex-table th:nth-child(1) { width: 56px; }
+  .coach-ex-table th:nth-child(3),
+  .coach-ex-table th:nth-child(4),
+  .coach-ex-table th:nth-child(5) { width: 88px; }
+  .coach-ex-table th:nth-child(6) { width: 96px; }
+  .coach-ex-table th:nth-child(7) { width: 88px; }
+  .coach-ex-table td { height: 52px; vertical-align: middle; }
+}
+
+/* Наведение на строку таблицы — в общем блоке hover ниже (только fine-указатель). */
+
+@media (min-width: 1100px) {
+  .coach-training--edit { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+  /* Библиотека упражнений — колонка на всю высоту окна: липкая панель, а
+     прокручивается внутри неё только список. overflow: visible оставляем, иначе
+     sticky-панель цеплялась бы к собственной прокрутке, а не к окну. */
+  .coach-training--edit .coach-picker {
+    position: sticky;
+    top: 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: calc(100vh - 96px);
+    max-height: none;
+    overflow: visible;
+  }
+  /* Заголовок, поиск и чипы держат свою высоту — сжимается только список. */
+  .coach-training--edit .coach-picker-head,
+  .coach-training--edit .coach-picker-groups,
+  .coach-training--edit .coach-picker > .coach-day-field { flex: none; }
+  .coach-training--edit .coach-picker-results {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    align-content: start;
+    padding-bottom: 2px;
+  }
+}
+
+/* Редактор: до 1280 px карточки, дальше — колонки одной строки. Восемь
+   колонок влезают только когда под таблицу остаётся ~850 px. */
+/* Строка заголовков существует в разметке всегда, но нужна только в табличной
+   сетке — иначе пустой div съедал бы gap мобильной стопки. */
+.coach-edit-headrow { display: none; }
+
+@media (min-width: 1280px) {
+  .coach-edit-headrow {
+    position: sticky;
+    top: 64px;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: 56px minmax(220px, 1fr) 88px 88px 88px 96px 88px 116px;
+    gap: 0 8px;
+    align-items: center;
+    padding: 8px 0;
+    background: var(--surface);
+    color: var(--muted-2);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  .coach-edit-list { display: block; }
+  .coach-edit-row {
+    display: grid;
+    grid-template-columns: 56px minmax(220px, 1fr) 88px 88px 88px 96px 88px 116px;
+    gap: 0 8px;
+    align-items: center;
+    padding: 8px 0;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+  }
+  .coach-edit-head,
+  .coach-edit-fields { display: contents; }
+  .coach-edit-num { justify-self: center; width: 30px; height: 30px; font-size: 12.5px; }
+  .coach-edit-id { min-width: 0; }
+  .coach-edit-tools { grid-column: 8; grid-row: 1; justify-content: flex-end; flex-wrap: nowrap; gap: 0; margin: 0; }
+  .coach-edit-row .coach-icon-btn {
+    width: 36px;
+    height: 36px;
+    opacity: .55;
+    transition: opacity .15s ease-out, color .2s ease-out, background-color .2s ease-out, border-color .2s ease-out;
+  }
+  .coach-edit-row:hover .coach-icon-btn:not(:disabled),
+  .coach-edit-row:focus-within .coach-icon-btn:not(:disabled) { opacity: 1; }
+  /* Подписи полей остаются в дереве для скринридеров — колонки называет шапка. */
+  .coach-edit-row .coach-field-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .coach-edit-row .coach-day-field { min-width: 0; }
+  .coach-edit-row .coach-input { min-height: 38px; padding: 0 8px; text-align: right; font-variant-numeric: tabular-nums; }
+  .coach-edit-row input[data-day-field="tempo"] { text-align: center; }
+}
+
+/* Сохранение дня: панель по ширине колонки таблицы, справа снизу. */
+@media (min-width: 1100px) {
+  .coach-training-page .coach-savebar { width: calc(100% - 356px); bottom: 16px; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .coach-ex-table tbody tr:hover { background-color: var(--surface-2); }
+  .coach-picker-item:hover { background-color: var(--surface-2); border-color: var(--border-strong); }
+}
+
+/* --- 2.3. Программа: дни в две колонки, иконка у «Убрать» --- */
+.coach-program-remove-icon { display: none; }
+.coach-program-remove-icon .icon { width: 16px; height: 16px; }
+
+@media (min-width: 1024px) {
+  .coach-program-days { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .coach-program-remove { display: inline-flex; align-items: center; justify-content: center; width: 44px; padding: 0; }
+  .coach-program-remove-icon { display: inline-grid; place-items: center; }
+  /* Текстовая подпись уходит в невидимый слой: имя кнопке даёт aria-label. */
+  .coach-program-remove-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+@media (min-width: 1280px) {
+  .coach-edit-row:last-child { border-bottom: 0; }
+}
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  .coach-edit-row:hover { background-color: var(--surface-2); }
+}
+
+/* --- 2.4. Длинные имена не рвут сетку: перенос вместо горизонтальной прокрутки --- */
+.coach-title,
+.coach-client-name,
+.coach-open { overflow-wrap: anywhere; }
+
+/* --- 2.5. Норма питания: расчёт слева, правка справа --- */
+.coach-nutrition-page { gap: 12px; }
+.coach-norm { display: grid; gap: 12px; align-items: start; }
+.coach-norm-side { display: grid; gap: 12px; align-content: start; }
+
+.coach-norm-form { gap: 12px; }
+.coach-norm-form-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
+.coach-norm-form-head .coach-block-title { flex: 1 1 auto; }
+
+.coach-norm-macros { display: grid; gap: 10px; }
+.coach-norm-macro { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; }
+.coach-norm-macro-head { display: flex; grid-column: 1 / -1; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; }
+.coach-norm-macro-name { color: var(--text); font-size: 13px; font-weight: 700; line-height: 1.3; }
+.coach-norm-macro .coach-hint { font-variant-numeric: tabular-nums; }
+
+/* Сумма и расхождение отделены пунктиром: это проверка введённых цифр. */
+.coach-norm-totals { padding-top: 10px; border-top: 1px dashed var(--border-strong); }
+.coach-norm-totals output,
+.coach-norm-macro output { font-variant-numeric: tabular-nums; font-weight: 650; }
+
+.coach-norm-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.coach-norm-reset { width: 100%; }
+.coach-norm .coach-savebar { flex-wrap: wrap; margin-top: 0; }
+
+@media (max-width: 359px) {
+  .coach-norm-pair,
+  .coach-norm-macro { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (min-width: 1024px) {
+  .coach-norm { grid-template-columns: 320px minmax(0, 1fr); }
+  .coach-norm-side { position: sticky; top: 88px; }
+}
+
+/* --- 2.6. Дни питания: дни пакета слева, день и каталог блюд справа --- */
+.coach-food-page { gap: 12px; }
+.coach-note-line { margin: 0; color: var(--muted-2); font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere; }
+
+.coach-food { display: grid; gap: 12px; align-items: start; }
+.coach-food-side { display: grid; gap: 10px; align-content: start; }
+.coach-food-main { min-width: 0; }
+.coach-food-form { display: grid; gap: 12px; }
+.coach-food-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
+.coach-food-head .coach-block-title { flex: 1 1 auto; }
+
+.coach-food-days { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.coach-food-day { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; min-height: 52px; padding: 7px 10px; color: var(--text); font: inherit; text-align: left; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; transition: border-color .2s ease-out, background-color .2s ease-out; }
+.coach-food-day:hover { border-color: var(--border-strong); background: var(--surface); }
+.coach-food-day:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.coach-food-day:active { transform: scale(.99); }
+.coach-food-day[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-line); }
+.coach-food-day-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.coach-food-day-name { color: var(--text); font-size: 13px; font-weight: 650; line-height: 1.3; }
+.coach-food-day-meta { color: var(--muted-2); font-size: 11.5px; line-height: 1.3; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.coach-food-day .coach-badge { grid-row: 1; }
+
+.coach-dish-group { display: grid; gap: 8px; }
+.coach-dish-group-title { margin: 0; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .05em; line-height: 1.3; text-transform: uppercase; }
+.coach-dish-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.coach-dish { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; }
+.coach-dish-text { display: grid; gap: 1px; min-width: 0; }
+.coach-dish-name { color: var(--text); font-size: 13px; font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; }
+.coach-dish-meta { color: var(--muted-2); font-size: 11.5px; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.coach-dish-remove { flex: none; min-height: 44px; padding: 0 12px; color: var(--accent-text); font: inherit; font-size: 12.5px; font-weight: 700; background: none; border: 1px solid var(--accent-line); border-radius: 999px; cursor: pointer; transition: background-color .2s ease-out, border-color .2s ease-out; }
+.coach-dish-remove:hover { background: var(--accent-soft); }
+.coach-dish-remove:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.coach-dish-remove:active { transform: scale(.97); }
+
+.coach-dish-picks { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.coach-dish-pick { display: grid; gap: 2px; min-height: 44px; padding: 8px 10px; color: var(--text); font: inherit; text-align: left; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; transition: border-color .2s ease-out, background-color .2s ease-out, opacity .2s ease-out; }
+.coach-dish-pick:hover { border-color: var(--border-strong); background: var(--surface); }
+.coach-dish-pick:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.coach-dish-pick:active { transform: scale(.99); }
+.coach-dish-pick.is-on { background: var(--accent-soft); border-color: var(--accent-line); }
+/* Не отмеченное клиентом блюдо видно, но приглушено: пунктирная рамка и
+   приглушённый цвет названия вместо opacity всей кнопки — полупрозрачный
+   текст на --surface-2 не дотягивает до 4.5:1 в светлой теме. */
+.coach-dish-pick.is-off { border-style: dashed; }
+.coach-dish-pick.is-off .coach-dish-pick-name { color: var(--muted); }
+.coach-dish-pick-name { font-size: 13px; font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; }
+.coach-dish-pick-meta { color: var(--muted-2); font-size: 11.5px; line-height: 1.3; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+.coach-food-form .coach-savebar { flex-wrap: wrap; }
+
+@media (min-width: 1024px) {
+  .coach-food { grid-template-columns: 260px minmax(0, 1fr); gap: 20px; }
+  .coach-food-side { position: sticky; top: 88px; }
+  .coach-food-days { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 359px) {
+  .coach-food-form .coach-savebar .btn { flex-basis: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coach-food-day,
+  .coach-dish-pick,
+  .coach-dish-remove { transition: none; }
+  .coach-food-day:active,
+  .coach-dish-pick:active,
+  .coach-dish-remove:active { transform: none; }
+}
+
+/* --- 11L. Архив пакетов: плитки объёма и таблицы по дням --- */
+.coach-volume { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.coach-volume-cell { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; }
+.coach-volume-label { color: var(--muted-2); font-size: 10.5px; font-weight: 700; letter-spacing: .05em; line-height: 1.3; text-transform: uppercase; overflow-wrap: anywhere; }
+.coach-volume-num { color: var(--text); font-size: 20px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.coach-volume-unit { color: var(--muted); font-size: 11.5px; line-height: 1.3; }
+
+.coach-archive-grid { display: grid; gap: 16px; align-items: start; }
+.coach-archive-weeks { display: flex; flex-direction: column; gap: 8px; }
+.coach-archive-week { padding: 0 12px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; }
+.coach-archive-week-head { display: flex; flex-direction: column; gap: 1px; padding: 10px 0; cursor: pointer; list-style: none; }
+.coach-archive-week-head::-webkit-details-marker { display: none; }
+.coach-archive-week-name { color: var(--text); font-size: 13.5px; font-weight: 650; line-height: 1.35; }
+.coach-archive-week-meta { color: var(--muted-2); font-size: 12px; line-height: 1.35; font-variant-numeric: tabular-nums; }
+.coach-archive-week .coach-table-wrap { background: var(--surface); border-radius: 10px; }
+
+/* Своя таблица, а не .coach-ex-table: там вторая колонка — название
+   упражнения, а здесь вторая колонка — число. До 720 px раскладываем
+   карточками, первая ячейка (день) идёт заголовком. */
+.coach-archive-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.coach-archive-table thead { display: none; }
+.coach-archive-table tbody { display: grid; gap: 6px; }
+.coach-archive-table tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 12px; padding: 8px 10px; border-radius: 10px; }
+.coach-archive-table td { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; color: var(--text); font-size: 12.5px; line-height: 1.4; text-align: right; overflow-wrap: anywhere; }
+.coach-archive-table td::before { content: attr(data-label); flex: none; color: var(--muted-2); font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-align: left; text-transform: uppercase; }
+.coach-archive-table td:first-child { grid-column: 1 / -1; padding-bottom: 2px; font-size: 13.5px; font-weight: 650; text-align: left; }
+.coach-archive-table td:first-child::before { content: none; }
+.coach-archive-total { background: var(--surface-2); }
+.coach-archive-total td { font-weight: 650; }
+
+@media (min-width: 720px) {
+  .coach-archive-table { display: table; min-width: 460px; }
+  .coach-archive-table thead { display: table-header-group; }
+  .coach-archive-table tbody { display: table-row-group; }
+  .coach-archive-table tr { display: table-row; padding: 0; background: none; border-radius: 0; }
+  .coach-archive-table th { padding: 0 8px 7px; color: var(--muted-2); font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-align: right; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+  .coach-archive-table th:first-child { text-align: left; }
+  .coach-archive-table td { display: table-cell; padding: 8px; text-align: right; border-bottom: 1px solid var(--border); }
+  .coach-archive-table td::before { content: none; }
+  .coach-archive-table td:first-child { font-size: 13px; text-align: left; }
+  .coach-archive-table tbody tr:last-child td { border-bottom: 0; }
+  .coach-archive-total { background: none; }
+  .coach-archive-total td { border-top: 1px solid var(--border); border-bottom: 0; }
+}
+
+@media (min-width: 1024px) {
+  .coach-archive-grid { grid-template-columns: minmax(0, 360px) minmax(0, 1fr); }
+}

@@ -88,6 +88,7 @@
       <header class="coach-head">
         <div class="coach-brand">
           ${ui.logoLockup ? ui.logoLockup("sm") : ""}
+          <span class="coach-head-title">Клиенты</span>
           <span class="coach-badge">Прототип</span>
         </div>
         <div class="coach-head-actions">
@@ -109,16 +110,18 @@
       ${coachHeader()}
       ${coachHeading()}
 
-      <div class="coach-tools">
-        <label class="coach-search">
-          <span class="sr-only">Поиск клиента по имени</span>
-          <input class="input coach-search-input" type="search" data-coach-search data-focus="coach-search" value="${escapeHtml(App.state.coachQuery)}" placeholder="Найти клиента" autocomplete="off" spellcheck="false">
-        </label>
-        <p class="coach-count" aria-live="polite">${escapeHtml(countLine)}</p>
-      </div>
+      <div class="coach-toolbar">
+        <div class="coach-tools">
+          <label class="coach-search">
+            <span class="sr-only">Поиск клиента по имени</span>
+            <input class="input coach-search-input" type="search" data-coach-search data-focus="coach-search" value="${escapeHtml(App.state.coachQuery)}" placeholder="Найти клиента" autocomplete="off" spellcheck="false">
+          </label>
+          <p class="coach-count" aria-live="polite">${escapeHtml(countLine)}</p>
+        </div>
 
-      <div class="coach-filters" role="group" aria-label="Фильтр клиентов">
-        ${filterChips()}
+        <div class="coach-filters" role="group" aria-label="Фильтр клиентов">
+          ${filterChips()}
+        </div>
       </div>
 
       ${App.coach.hasOverrides() ? `

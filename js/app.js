@@ -26,7 +26,7 @@
   const PUBLIC_ROUTES = ["welcome", "demo", "register", "verify", "onboarding"];
   // Кабинет тренера — третья оболочка: доступен и гостю, и клиенту, стадию
   // входа не меняет и в навигацию клиента не попадает.
-  const COACH_ROUTES = ["coach", "coach-client"];
+  const COACH_ROUTES = ["coach", "coach-client", "coach-program", "coach-training", "coach-nutrition", "coach-food", "coach-archive"];
 
   function isPublicRoute(route) {
     return PUBLIC_ROUTES.indexOf(route) !== -1;
@@ -44,6 +44,23 @@
     // Карточка без выбранного клиента (прямая ссылка, сброс памяти) ведёт в
     // список, а не в «Экран недоступен»: id живёт только в памяти.
     if (route === "coach-client" && !coachClient()) return "coach";
+    // Программа тоже открывается только из выбранной карточки: id клиента
+    // живёт в памяти и перезагрузку не переживает.
+    if (route === "coach-program" && !coachClient()) return "coach";
+    // Редактор тренировки без клиента или дня (прямая ссылка, F5) — в карточку
+    // клиента: ни id клиента, ни id дня не переживают перезагрузку.
+    if (route === "coach-training") {
+      const client = coachClient();
+      if (!client) return "coach";
+      const day = coachTrainingDay(client);
+      if (!day) return "coach-client";
+    }
+    // Норма питания считается для выбранного клиента: без него — в список.
+    if (route === "coach-nutrition" && !coachClient()) return "coach";
+    // Дни питания тоже привязаны к клиенту из памяти.
+    if (route === "coach-food" && !coachClient()) return "coach";
+    // Архив пакетов привязан к выбранному клиенту из памяти.
+    if (route === "coach-archive" && !coachClient()) return "coach";
     if (isCoachRoute(route)) return route;
     const stage = STATE.auth.stage;
     const client = stage === "client";
@@ -94,6 +111,47 @@
       App.state.coachMode = "view";
       App.state.coachDraft = null;
     }
+    // Черновик нормы питания живёт только на своём экране: уход его бросает,
+    // сохранённая норма остаётся в памяти.
+    if (route !== "coach-nutrition" && App.state) {
+      App.state.coachNormDraft = null;
+      App.state.coachNormErrors = {};
+    }
+    // Черновик дня питания живёт только на своём экране: уход его бросает,
+    // сохранённые дни остаются в памяти.
+    if (route !== "coach-food" && App.state) {
+      App.state.coachFoodDraft = null;
+    }
+    // Уход с редактора дня бросает его черновик и открытую панель выбора:
+    // сохранённая программа остаётся в памяти, несохранённые числа — нет.
+    if (route !== "coach-training" && App.state) {
+      if (App.state.coachProgramMode === "edit") {
+        App.state.coachProgramMode = "view";
+        App.state.coachProgramDraft = null;
+      }
+      if (App.state.coachPicker && App.state.coachPicker.open) {
+        App.state.coachPicker = { open: false, query: "", group: "all" };
+      }
+    }
+    // Черновик программы (#/coach-program) живёт на своём экране и в редакторе
+    // дня: заход за упражнениями и возврат не теряют уже переставленные дни и
+    // круги. Любой другой экран его бросает, иначе сохранение вернуло бы старые
+    // копии упражнений уже отредактированных дней.
+    if (route !== "coach-program" && route !== "coach-training" && App.state) {
+      App.state.coachPlanMode = "view";
+      App.state.coachPlanDraft = null;
+      // Контекст «день открыт из программы» живёт только в паре этих экранов.
+      App.state.coachTrainingFrom = "";
+      // Вместе с черновиком пропадает и день, который в программе ещё не жил.
+      const client = STATE.coachClientId ? App.coach.find(STATE.coachClientId) : null;
+      if (
+        client &&
+        STATE.coachProgramDayId &&
+        !App.coach.programDay(client.id, STATE.coachProgramDayId)
+      ) {
+        STATE.coachProgramDayId = null;
+      }
+    }
     // Правка анкеты живёт только внутри экрана онбординга: уход на другой
     // экран без сохранения отменяет черновик, чтобы режим правки не «залипал».
     if (route !== "onboarding" && App.onboarding.isEditing()) App.onboarding.cancelEdit();
@@ -124,6 +182,17 @@
     // Отсчёт повторной отправки принадлежит только #/verify: уход со экрана его гасит.
     if (route === "verify") startResend();
     else stopResend();
+    // Свежая разметка приходит с заблокированной кнопкой «Сохранить»: если день
+    // уже отличается от сохранённого (добавили упражнение, переставили строки),
+    // включаем её сразу, не дожидаясь ввода в поле.
+    if (route === "coach-training") syncDaySave();
+    // То же для программы: добавленный или переставленный день сразу включает
+    // «Сохранить», хотя полей никто не трогал.
+    if (route === "coach-program") syncPlanSave();
+    // Норма питания: правка в памяти сразу делает черновик грязным, а
+    // подписи-производные в разметке уже посчитаны вьюхой.
+    if (route === "coach-nutrition") syncNormSave();
+    if (route === "coach-food") syncFoodSave();
     if (settings.static) {
       screen.querySelectorAll(".ring-value").forEach((ring) => {
         ring.style.strokeDashoffset = ring.dataset.offset;
@@ -154,6 +223,9 @@
     } else if (settings.focusKey) {
       focusKey(settings.focusKey);
     }
+    // Удаление дня могло сделать программу меньше израсходованного: причина
+    // видна сразу, иначе выключенная кнопка сохранения молчит о ней.
+    if (route === "coach-program") revealPlanErrors();
   }
 
   function prepareWorkouts() {
@@ -1786,6 +1858,15 @@
     return id ? App.coach.find(id) : null;
   }
 
+  // День программы текущего клиента: id дня живёт в памяти и сверяется с
+  // программой клиента — день другого клиента после смены не открывается.
+  function coachTrainingDay(client) {
+    if (!client || !STATE.coachProgramDayId) return null;
+    // editDay() видит и день из черновика программы: только что добавленный
+    // день наполняется упражнениями до сохранения всей программы.
+    return App.coach.editDay(client.id, STATE.coachProgramDayId);
+  }
+
   function openCoachClient(id) {
     const client = App.coach.find(id);
     if (!client) return;
@@ -1794,6 +1875,12 @@
     // не переезжает на другого клиента.
     STATE.coachMode = "view";
     STATE.coachDraft = null;
+    STATE.coachProgramDayId = null;
+    STATE.coachProgramMode = "view";
+    STATE.coachProgramDraft = null;
+    STATE.coachPicker = { open: false, query: "", group: "all" };
+    STATE.coachNormDraft = null;
+    STATE.coachNormErrors = {};
     go("coach-client");
   }
 
@@ -1846,7 +1933,8 @@
     input.setAttribute("aria-describedby", box.id);
   }
 
-  const COACH_FIELDS = ["targetWeight", "note", "trainingTotal", "nutritionTotal"];
+  // Объёма тренировок здесь нет: он считается из программы клиента.
+  const COACH_FIELDS = ["targetWeight", "note", "nutritionTotal"];
 
   function showCoachErrors(check) {
     COACH_FIELDS.forEach((field) => coachFieldError(field, check.errors[field] || ""));
@@ -1870,7 +1958,6 @@
     return (
       a.targetWeight === b.targetWeight &&
       a.note === b.note &&
-      a.trainingTotal === b.trainingTotal &&
       a.nutritionTotal === b.nutritionTotal
     );
   }
@@ -1922,6 +2009,950 @@
     STATE.coachDraft = null;
     toast("Сохранено. Правки действуют до перезагрузки");
     render("coach-client", { static: true, focusKey: "coach-client-title" });
+  }
+
+  /* ---------- норма питания клиента (КБЖУ) ---------- */
+
+  // Черновик формы нормы живёт только на своём экране: уход его бросает,
+  // сохранённая норма остаётся в памяти. Обнуляет черновик render().
+  function normDraft() {
+    const client = coachClient();
+    if (!client) return null;
+    if (!STATE.coachNormDraft) STATE.coachNormDraft = App.coach.normDraft(client.id);
+    return STATE.coachNormDraft;
+  }
+
+  function normFieldNode(field) {
+    return document.querySelector('[data-norm-field="' + String(field) + '"]');
+  }
+
+  // Ошибки нормы вставляет app.js, как у карточки и дня: вью рисует поля,
+  // тексты и aria-связки ставятся здесь.
+  function normFieldError(field, message) {
+    const text = String(field);
+    const input = normFieldNode(text);
+    const holder = input ? input.closest(".coach-field") || input.parentElement : null;
+    if (!holder) return;
+    let box = holder.querySelector('[data-norm-error="' + text + '"]');
+    if (!message) {
+      if (box) box.remove();
+      if (input) {
+        input.removeAttribute("aria-invalid");
+        input.removeAttribute("aria-describedby");
+      }
+      return;
+    }
+    if (!box) {
+      box = document.createElement("p");
+      box.className = "coach-error";
+      box.id = "coach-norm-error-" + text;
+      box.setAttribute("role", "alert");
+      box.setAttribute("data-norm-error", text);
+      holder.appendChild(box);
+    }
+    box.innerHTML = '<span class="coach-error-icon" aria-hidden="true">!</span>' + escapeHtml(message);
+    if (input) {
+      input.setAttribute("aria-invalid", "true");
+      input.setAttribute("aria-describedby", box.id);
+    }
+  }
+
+  function clearNormErrors() {
+    document.querySelectorAll("[data-norm-error]").forEach((node) => node.remove());
+    document.querySelectorAll("[data-norm-field][aria-invalid]").forEach((input) => {
+      input.removeAttribute("aria-invalid");
+      input.removeAttribute("aria-describedby");
+    });
+  }
+
+  function showNormErrors(check) {
+    clearNormErrors();
+    const errors = check.errors || {};
+    Object.keys(errors).forEach((field) => normFieldError(field, errors[field]));
+    const first = Object.keys(errors)[0];
+    const input = first ? normFieldNode(first) : null;
+    if (!input) return;
+    input.focus({ preventScroll: true });
+    if (typeof input.scrollIntoView === "function") {
+      input.scrollIntoView({ block: "center", behavior: "auto" });
+    }
+  }
+
+  // Производные подписи — граммы на кг, сумма БЖУ и расхождение с
+  // калорийностью — пересчитываются прямо в DOM: полная отрисовка на каждом
+  // вводе сбивала бы каретку.
+  function syncNormOutputs(draftValue, client) {
+    const derived = App.coach.normDerived(draftValue, client);
+    const write = (key, text) => {
+      document.querySelectorAll('[data-norm-out="' + key + '"]').forEach((node) => {
+        node.textContent = text;
+      });
+    };
+    write("perKgProtein", one(derived.perKg.protein));
+    write("perKgFat", one(derived.perKg.fat));
+    write("perKgCarbs", one(derived.perKg.carbs));
+    write("sum", num(derived.macroKcal) + " ккал");
+    const diff = derived.diff;
+    write("diff", (diff > 0 ? "+" : diff < 0 ? "−" : "") + num(Math.abs(diff)) + " ккал");
+    const hint = document.querySelector("[data-norm-diff-hint]");
+    if (hint) hint.hidden = Math.abs(diff) <= 60;
+  }
+
+  // «Сохранить» активна, пока черновик отличается от действующей нормы:
+  // невалидный черновик ловит отправка, чтобы ошибки были видны под полями.
+  function syncNormSave() {
+    const form = document.querySelector("[data-norm-form]");
+    const client = coachClient();
+    const draftValue = STATE.coachNormDraft;
+    if (!form || !client || !draftValue) return;
+    const button = form.querySelector('button[type="submit"]');
+    if (!button) return;
+    const same = App.coach.sameNormDraft(draftValue, App.coach.normDraft(client.id));
+    button.disabled = same;
+    button.setAttribute("aria-disabled", String(same));
+    const bar = form.querySelector(".coach-savebar");
+    if (bar) bar.classList.toggle("is-dirty", !same);
+  }
+
+  // Пересчёт связывает три уровня: калорийность, граммы и доли. Поле под
+  // курсором не переписываем — иначе каретка прыгнет в середину числа.
+  function syncNormField(input) {
+    const client = coachClient();
+    const draftValue = normDraft();
+    if (!client || !draftValue) return;
+    const field = input.getAttribute("data-norm-field");
+    draftValue[field] = input.value;
+    const next = App.coach.recalcNorm(draftValue, field);
+    Object.keys(next).forEach((key) => {
+      draftValue[key] = next[key];
+      if (key === field) return;
+      const node = normFieldNode(key);
+      if (node && node.value !== next[key]) node.value = next[key];
+    });
+    normFieldError(field, "");
+    syncNormOutputs(draftValue, client);
+    syncNormSave();
+  }
+
+  function submitNormForm() {
+    const client = coachClient();
+    if (!client) return;
+    const draftValue = normDraft();
+    if (!draftValue) return;
+    const check = App.coach.validateNorm(client, draftValue);
+    if (!check.ok) {
+      showNormErrors(check);
+      return;
+    }
+    App.coach.applyNorm(client.id, draftValue);
+    STATE.coachNormDraft = null;
+    STATE.coachNormErrors = {};
+    toast("Норма сохранена. Правка действует до перезагрузки");
+    render("coach-nutrition", { static: true, focusKey: "coach-nutrition-title" });
+  }
+
+  /* ---------- дни питания клиента ---------- */
+
+  // Черновик дня питания: живёт только на экране #/coach-food, уход его
+  // бросает (см. render), сохранённые дни остаются в памяти.
+  function foodDraft() {
+    const client = coachClient();
+    if (!client) return null;
+    const dayNo = STATE.coachFoodDayNo;
+    if (!STATE.coachFoodDraft || STATE.coachFoodDraft.dayNo !== dayNo) {
+      STATE.coachFoodDraft = App.coach.foodDayDraft(client.id, dayNo);
+    }
+    return STATE.coachFoodDraft;
+  }
+
+  function clearFoodErrors() {
+    document.querySelectorAll("[data-food-error]").forEach((node) => node.remove());
+  }
+
+  // Ошибка дня одна и живёт над списком блюд: у выбора блюд нет поля ввода.
+  function showFoodErrors(check) {
+    clearFoodErrors();
+    const box = document.querySelector("[data-food-errors]");
+    if (!box) return;
+    const message = check.errors.dishes;
+    if (message) {
+      const line = document.createElement("p");
+      line.className = "coach-error";
+      line.id = "coach-food-error";
+      line.setAttribute("role", "alert");
+      line.setAttribute("data-food-error", "dishes");
+      line.innerHTML = '<span class="coach-error-icon" aria-hidden="true">!</span>' + escapeHtml(message);
+      box.appendChild(line);
+    }
+    const first = document.querySelector('[data-action="coach-dish-add"]');
+    if (first) first.focus({ preventScroll: true });
+  }
+
+  function syncFoodSave() {
+    const form = document.querySelector("[data-food-form]");
+    const client = coachClient();
+    const draftValue = STATE.coachFoodDraft;
+    if (!form || !client || !draftValue) return;
+    const button = form.querySelector("[data-food-save]");
+    if (!button) return;
+    const same = App.coach.sameFoodDraft(
+      draftValue,
+      App.coach.foodDayDraft(client.id, draftValue.dayNo)
+    );
+    button.disabled = same;
+    button.setAttribute("aria-disabled", String(same));
+    const bar = form.querySelector(".coach-savebar");
+    if (bar) bar.classList.toggle("is-dirty", !same);
+  }
+
+  function submitFoodForm() {
+    const client = coachClient();
+    if (!client) return;
+    const draftValue = foodDraft();
+    if (!draftValue) return;
+    const check = App.coach.validateFoodDay(draftValue);
+    if (!check.ok) {
+      showFoodErrors(check);
+      return;
+    }
+    App.coach.applyFoodDay(client.id, draftValue.dayNo, draftValue);
+    STATE.coachFoodDraft = null;
+    toast("День питания сохранён (до перезагрузки)");
+    render("coach-food", { static: true, focusKey: "coach-food-days" });
+  }
+
+  function addFoodDish(name) {
+    const client = coachClient();
+    const draftValue = foodDraft();
+    if (!client || !draftValue) return;
+    if (draftValue.dishes.indexOf(name) !== -1) return;
+    if (draftValue.dishes.length >= App.coach.foodDayLimits.dishesMax) {
+      toast("В дне не больше " + App.coach.foodDayLimits.dishesMax + " блюд");
+      return;
+    }
+    draftValue.dishes.push(name);
+    render("coach-food", { static: true, focusKey: "coach-food-dish-" + draftValue.dishes.length });
+  }
+
+  function removeFoodDish(name) {
+    const draftValue = foodDraft();
+    if (!draftValue) return;
+    const index = draftValue.dishes.indexOf(name);
+    if (index === -1) return;
+    draftValue.dishes.splice(index, 1);
+    render("coach-food", { static: true, focusKey: "coach-food-pick-" + name });
+  }
+
+  /* ---------- редактор тренировочного дня ---------- */
+
+  const DAY_FIELDS = ["sets", "reps", "weight", "tempo", "rest"];
+
+  function coachDay() {
+    const client = coachClient();
+    return client ? coachTrainingDay(client) : null;
+  }
+
+  // Черновик дня живёт в памяти и создаётся лениво — как черновик карточки.
+  function dayDraft() {
+    const day = coachDay();
+    if (!day) return null;
+    if (!STATE.coachProgramDraft) STATE.coachProgramDraft = App.coach.dayDraft(day);
+    return STATE.coachProgramDraft;
+  }
+
+  function dayFieldNode(key) {
+    const text = String(key);
+    const cut = text.lastIndexOf("-");
+    if (cut === -1) return document.querySelector('[data-day-field="' + text + '"]');
+    const field = text.slice(0, cut);
+    const index = text.slice(cut + 1);
+    return document.querySelector('[data-day-field="' + field + '"][data-item="' + index + '"]');
+  }
+
+  // Ошибки дня, как и ошибки карточки, вставляет app.js: у ключа "exercises"
+  // нет поля ввода, поэтому он живёт в общем контейнере над списком.
+  function dayFieldError(key, message) {
+    const text = String(key);
+    const input = dayFieldNode(text);
+    const holder = input
+      ? input.closest(".coach-day-field") || input.parentElement
+      : document.querySelector("[data-day-errors]");
+    if (!holder) return;
+    let box = holder.querySelector('[data-day-error="' + text + '"]');
+    if (!message) {
+      if (box) box.remove();
+      if (input) {
+        input.removeAttribute("aria-invalid");
+        input.removeAttribute("aria-describedby");
+      }
+      return;
+    }
+    if (!box) {
+      box = document.createElement("p");
+      box.className = "coach-error";
+      box.id = "coach-day-error-" + text;
+      box.setAttribute("role", "alert");
+      box.setAttribute("data-day-error", text);
+      holder.appendChild(box);
+    }
+    box.innerHTML = '<span class="coach-error-icon" aria-hidden="true">!</span>' + escapeHtml(message);
+    if (input) {
+      input.setAttribute("aria-invalid", "true");
+      input.setAttribute("aria-describedby", box.id);
+    }
+  }
+
+  function clearDayErrors() {
+    document.querySelectorAll("[data-day-error]").forEach((node) => node.remove());
+    document.querySelectorAll("[data-day-field][aria-invalid]").forEach((input) => {
+      input.removeAttribute("aria-invalid");
+      input.removeAttribute("aria-describedby");
+    });
+  }
+
+  function showDayErrors(check) {
+    clearDayErrors();
+    const errors = check.errors || {};
+    Object.keys(errors).forEach((key) => dayFieldError(key, errors[key]));
+    const first = Object.keys(errors)[0];
+    if (!first) return;
+    const input = dayFieldNode(first);
+    const target =
+      input ||
+      document.querySelector("[data-picker-search]") ||
+      document.querySelector('[data-action="coach-picker-toggle"]');
+    if (!target) return;
+    target.focus({ preventScroll: true });
+    if (typeof target.scrollIntoView === "function") {
+      target.scrollIntoView({ block: "center", behavior: "auto" });
+    }
+  }
+
+  // Черновик и сохранённый день собирает один App.coach.dayDraft, поэтому
+  // порядок ключей совпадает и сравнение сериализацией корректно.
+  function syncDaySave() {
+    const form = document.querySelector("[data-day-form]");
+    const day = coachDay();
+    if (!form || !day || !STATE.coachProgramDraft) return;
+    const button = form.querySelector('button[type="submit"]');
+    if (!button) return;
+    const same = JSON.stringify(STATE.coachProgramDraft) === JSON.stringify(App.coach.dayDraft(day));
+    button.disabled = same;
+    button.setAttribute("aria-disabled", String(same));
+    const bar = form.closest(".coach-savebar");
+    if (bar) bar.classList.toggle("is-dirty", !same);
+  }
+
+  function syncDayField(input) {
+    const draft = dayDraft();
+    if (!draft) return;
+    const field = input.getAttribute("data-day-field");
+    const index = input.getAttribute("data-item");
+    if (index === null) {
+      if (field === "title") draft.title = input.value;
+    } else {
+      const item = draft.exercises[Number(index)];
+      if (!item) return;
+      item[field] = input.value;
+    }
+    clearDayErrors();
+    syncDaySave();
+  }
+
+  function submitDayForm() {
+    const client = coachClient();
+    const day = coachDay();
+    if (!client || !day) return;
+    const draft = dayDraft();
+    const check = App.coach.validateDay(draft);
+    if (!check.ok) {
+      showDayErrors(check);
+      return;
+    }
+    // День из черновика программы ещё не сохранён в программе: правка идёт в
+    // сам черновик и уедет вместе с «Сохранить» на экране программы.
+    const saved = App.coach.programDay(client.id, day.dayId)
+      ? App.coach.applyDay(client.id, day.dayId, draft)
+      : App.coach.applyPlanDay(day.dayId, draft);
+    if (!saved) return;
+    App.coach.refreshPlanDay(day.dayId, saved);
+    STATE.coachProgramMode = "view";
+    STATE.coachProgramDraft = null;
+    STATE.coachPicker = { open: false, query: "", group: "all" };
+    toast("Тренировка сохранена (до перезагрузки)");
+    // Программу не бросаем: тренер вернулся в неё, чтобы сохранить её целиком.
+    if (STATE.coachPlanDraft) {
+      render("coach-program", { static: true, focusKey: "coach-plan-add" });
+      return;
+    }
+    // День открыли из просмотра программы — туда и возвращаемся.
+    if (STATE.coachTrainingFrom === "program" && STATE.coachProgramDayId) {
+      const focusDay = STATE.coachProgramDayId;
+      STATE.coachTrainingFrom = "";
+      render("coach-program", { static: true, focusKey: "coach-plan-open-" + focusDay });
+      return;
+    }
+    render("coach-training", { static: true, focusKey: "coach-program-view" });
+  }
+
+  // Программа открывается из карточки в просмотре: чужой черновик редактора
+  // (другого клиента или прошлого захода) не переносится.
+  function openCoachProgram() {
+    const client = coachClient();
+    if (!client) return;
+    STATE.coachPlanMode = "view";
+    STATE.coachPlanDraft = null;
+    STATE.coachProgramDayId = null;
+    go("coach-program");
+  }
+
+  function openCoachTraining(dayId) {
+    const client = coachClient();
+    if (!client) return;
+    const day = App.coach.editDay(client.id, dayId);
+    if (!day) return;
+    STATE.coachProgramDayId = day.dayId;
+    // Возврат после сохранения дня и стрелка «←» ведут туда, откуда открыли.
+    STATE.coachTrainingFrom = currentRoute === "coach-program" ? "program" : "";
+    STATE.coachProgramMode = "view";
+    STATE.coachProgramDraft = null;
+    STATE.coachPicker = { open: false, query: "", group: "all" };
+    go("coach-training");
+  }
+
+  // Норма питания открывается из карточки: черновик создаётся заново, чтобы
+  // не принести правки другого клиента или прошлого захода.
+  function openCoachNutrition() {
+    const client = coachClient();
+    if (!client) return;
+    STATE.coachNormDraft = null;
+    STATE.coachNormErrors = {};
+    go("coach-nutrition");
+  }
+
+  // «Отмена» бросает черновик и возвращает в карточку: молча оставлять форму
+  // с правками на экране — значит делать вид, что они применены.
+  function closeCoachNutrition() {
+    STATE.coachNormDraft = null;
+    STATE.coachNormErrors = {};
+    go("coach-client", "#coach-client-title");
+  }
+
+  function resetNormAction() {
+    const client = coachClient();
+    if (!client) return;
+    App.coach.resetNorm(client.id);
+    STATE.coachNormDraft = null;
+    STATE.coachNormErrors = {};
+    toast("Норма снова считается по формуле");
+    render("coach-nutrition", { static: true, focusKey: "coach-nutrition-title" });
+  }
+
+  // Дни питания открываются из карточки на текущем дне пакета: черновик не
+  // переносим между заходами и клиентами.
+  function openCoachFood() {
+    const client = coachClient();
+    if (!client) return;
+    const pkg = client.packages.nutrition;
+    // Открываем текущий день пакета; у последнего дня индекс не выходит за пакет.
+    STATE.coachFoodDayNo = Math.min(pkg.used, Math.max(0, pkg.total - 1));
+    STATE.coachFoodDraft = null;
+    go("coach-food", '[data-focus="coach-food-day-' + STATE.coachFoodDayNo + '"]');
+  }
+
+  // «Отмена» бросает черновик и возвращает в карточку — как у нормы питания.
+  function closeCoachFood() {
+    STATE.coachFoodDraft = null;
+    go("coach-client", '[data-focus="coach-food-open"]');
+  }
+
+  // Архив пакетов открывается из карточки клиента. Вкладку запоминаем, чтобы
+  // «назад» в карточку и повторный вход не сбрасывали выбранный раздел.
+  function openCoachArchive(tab) {
+    const client = coachClient();
+    if (!client) return;
+    if (tab === "training" || tab === "nutrition") STATE.coachArchiveTab = tab;
+    go("coach-archive", '[data-focus="coach-archive-' + STATE.coachArchiveTab + '"]');
+  }
+
+  function selectArchiveTab(value) {
+    if (value !== "training" && value !== "nutrition") return;
+    if (STATE.coachArchiveTab === value) return;
+    STATE.coachArchiveTab = value;
+    render("coach-archive", { static: true, focusKey: "coach-archive-" + value });
+  }
+
+  function selectFoodDay(value) {
+    const dayNo = Number(value);
+    const client = coachClient();
+    if (!client || !isFinite(dayNo) || dayNo < 0) return;
+    if (dayNo >= client.packages.nutrition.total) return;
+    if (dayNo === STATE.coachFoodDayNo) return;
+    STATE.coachFoodDayNo = dayNo;
+    STATE.coachFoodDraft = null;
+    render("coach-food", { static: true, focusKey: "coach-food-day-" + dayNo });
+  }
+
+  function setFoodDishMode(mode) {
+    if (!App.coach.dishModes[mode]) return;
+    if (STATE.coachDishMode === mode) return;
+    STATE.coachDishMode = mode;
+    render("coach-food", { static: true, focusKey: "coach-dish-mode-" + mode });
+  }
+
+  function resetFoodAction() {
+    const client = coachClient();
+    if (!client) return;
+    App.coach.resetFoodDay(client.id, STATE.coachFoodDayNo);
+    STATE.coachFoodDraft = null;
+    toast("День питания очищен");
+    render("coach-food", { static: true, focusKey: "coach-food-days" });
+  }
+
+  function setCoachProgramMode(mode) {
+    const day = coachDay();
+    if (!day) return;
+    if (mode === "edit") {
+      // Повторное нажатие «Редактор» не должно затирать уже начатые правки.
+      if (STATE.coachProgramMode === "edit" && STATE.coachProgramDraft) {
+        render("coach-training", { static: true, focusKey: "coach-day-title" });
+        return;
+      }
+      STATE.coachProgramMode = "edit";
+      STATE.coachProgramDraft = App.coach.dayDraft(day);
+      render("coach-training", { static: true, focusKey: "coach-day-title" });
+      return;
+    }
+    // Просмотр и отмена ничего не сохраняют: черновик просто выбрасывается.
+    STATE.coachProgramMode = "view";
+    STATE.coachProgramDraft = null;
+    STATE.coachPicker = { open: false, query: "", group: "all" };
+    // День открывали из редактора программы — туда и возвращаемся.
+    if (STATE.coachPlanDraft) {
+      dropEmptyPlanDay(day);
+      render("coach-program", { static: true, focusKey: "coach-plan-add" });
+      return;
+    }
+    // Отмена в дне, открытом из программы, возвращает в просмотр программы.
+    if (STATE.coachTrainingFrom === "program") {
+      const focusDay = day.dayId;
+      STATE.coachTrainingFrom = "";
+      render("coach-program", { static: true, focusKey: "coach-plan-open-" + focusDay });
+      return;
+    }
+    render("coach-training", {
+      static: true,
+      focusKey: mode === "cancel" ? "coach-program-edit" : "coach-program-view",
+    });
+  }
+
+  /* ---------- программа и объём пакета ---------- */
+
+  // Черновик программы один на выход в редактор: переход в редактор дня и
+  // обратно не должен терять уже переставленные дни и круги.
+  function planDraft() {
+    const client = coachClient();
+    if (!client) return null;
+    if (!STATE.coachPlanDraft) {
+      STATE.coachPlanDraft = App.coach.programDraft(App.coach.program(client.id));
+    }
+    return STATE.coachPlanDraft;
+  }
+
+  function planFieldNode(key) {
+    const text = String(key);
+    if (text === "rounds" || text === "durationDays") {
+      return document.querySelector('[data-program-field="' + text + '"]');
+    }
+    const cut = text.lastIndexOf("-");
+    if (cut === -1) return null;
+    const dayId = text.slice(cut + 1);
+    return document.querySelector('[data-day-field="title"][data-day="' + dayId + '"]');
+  }
+
+  // Ошибки программы: у дней общий контейнер, у полей пакета — свои.
+  function planFieldError(key, message) {
+    const text = String(key);
+    const input = planFieldNode(text);
+    const holder = input
+      ? input.closest(".coach-program-field") || input.parentElement
+      : document.querySelector("[data-program-errors]");
+    if (!holder) return;
+    let box = holder.querySelector('[data-program-error="' + text + '"]');
+    if (!message) {
+      if (box) box.remove();
+      if (input) {
+        input.removeAttribute("aria-invalid");
+        input.removeAttribute("aria-describedby");
+      }
+      return;
+    }
+    if (!box) {
+      box = document.createElement("p");
+      box.className = "coach-error";
+      box.id = "coach-program-error-" + text;
+      box.setAttribute("role", "alert");
+      box.setAttribute("data-program-error", text);
+      holder.appendChild(box);
+    }
+    box.innerHTML = '<span class="coach-error-icon" aria-hidden="true">!</span>' + escapeHtml(message);
+    if (input) {
+      // У дня две ошибки (название и упражнения) живут в одной карточке:
+      // поле ссылается на все сообщения, а не только на последнее.
+      const ids = Array.prototype.map
+        .call(holder.querySelectorAll("[data-program-error]"), (node) => node.id)
+        .filter(Boolean);
+      input.setAttribute("aria-invalid", "true");
+      input.setAttribute("aria-describedby", ids.length ? ids.join(" ") : box.id);
+    }
+  }
+
+  function clearPlanErrors() {
+    document.querySelectorAll("[data-program-error]").forEach((node) => node.remove());
+    document.querySelectorAll("[data-program-field][aria-invalid]").forEach((input) => {
+      input.removeAttribute("aria-invalid");
+      input.removeAttribute("aria-describedby");
+    });
+    document.querySelectorAll("[data-day-field][aria-invalid]").forEach((input) => {
+      input.removeAttribute("aria-invalid");
+      input.removeAttribute("aria-describedby");
+    });
+  }
+
+  function showPlanErrors(check, silent) {
+    clearPlanErrors();
+    const errors = check.errors || {};
+    Object.keys(errors).forEach((key) => planFieldError(key, errors[key]));
+    const first = Object.keys(errors)[0];
+    if (!first || silent) return;
+    const target =
+      planFieldNode(first) ||
+      document.querySelector("[data-program-errors]") ||
+      document.querySelector('[data-action="coach-add-day"]');
+    if (!target) return;
+    target.focus({ preventScroll: true });
+    if (typeof target.scrollIntoView === "function") {
+      target.scrollIntoView({ block: "center", behavior: "auto" });
+    }
+  }
+
+  // «Сохранить» активна, только пока программа отличается от сохранённой и
+  // проходит проверку: черновик и программа собираются одним programDraft().
+  // Возвращает результат проверки — ввод в поле показывает ошибки без фокуса.
+  function syncPlanSave() {
+    const form = document.querySelector("[data-program-form]");
+    const client = coachClient();
+    if (!form || !client || !STATE.coachPlanDraft) return null;
+    const button = form.querySelector('button[type="submit"]');
+    if (!button) return null;
+    const check = App.coach.validateProgram(STATE.coachPlanDraft, client);
+    const same =
+      JSON.stringify(STATE.coachPlanDraft) ===
+      JSON.stringify(App.coach.programDraft(App.coach.program(client.id)));
+    const locked = same || !check.ok;
+    button.disabled = locked;
+    button.setAttribute("aria-disabled", String(locked));
+    const bar = form.closest(".coach-savebar");
+    if (bar) bar.classList.toggle("is-dirty", !same);
+    return check;
+  }
+
+  // Программа могла стать невалидной от удаления дня или круга: причина видна
+  // сразу после отрисовки, иначе выключенная «Сохранить» молчит о ней.
+  function revealPlanErrors() {
+    const draft = STATE.coachPlanDraft;
+    const client = coachClient();
+    if (!draft || !client) return;
+    const check = App.coach.validateProgram(draft, client);
+    if (check.ok) {
+      clearPlanErrors();
+      return;
+    }
+    // Фокус после render() уже стоит на кнопке действия; перебиваем его только
+    // тогда, когда фокуса нет вовсе.
+    const active = document.activeElement;
+    showPlanErrors(check, !!active && active !== document.body);
+  }
+
+  // Объём пакета — производная от дней и кругов, поэтому подпись
+  // пересчитывается прямо в DOM: полная отрисовка сбивала бы каретку.
+  function syncPlanTotals() {
+    const draft = STATE.coachPlanDraft;
+    if (!draft) return;
+    const line = App.coach.programLine(draft);
+    document.querySelectorAll("[data-program-total]").forEach((node) => {
+      node.textContent = line;
+    });
+    const summary = App.coach.programSummary(draft);
+    document.querySelectorAll("[data-program-summary]").forEach((node) => {
+      node.textContent = summary;
+    });
+  }
+
+  function syncPlanField(input) {
+    const draft = planDraft();
+    if (!draft) return;
+    const field = input.getAttribute("data-program-field");
+    if (field !== "rounds" && field !== "durationDays") return;
+    draft[field] = input.value;
+    syncPlanTotals();
+    const check = syncPlanSave();
+    if (!check || check.ok) clearPlanErrors();
+    else showPlanErrors(check, true);
+  }
+
+  // Название дня в редакторе программы живёт в черновике программы, а не в
+  // черновике дня — иначе правка потерялась бы при перерисовке списка.
+  function syncPlanDayTitle(input) {
+    const draft = planDraft();
+    if (!draft) return;
+    const dayId = input.getAttribute("data-day");
+    const days = draft.days.filter((item) => item.dayId === dayId);
+    if (!days.length) return;
+    days[0].title = input.value;
+    const check = syncPlanSave();
+    if (!check || check.ok) clearPlanErrors();
+    else showPlanErrors(check, true);
+  }
+
+  function planDayIndex(dayId) {
+    const draft = STATE.coachPlanDraft;
+    if (!draft || !draft.days) return -1;
+    return draft.days.map((item) => item.dayId).indexOf(dayId);
+  }
+
+  function setPlanMode(mode) {
+    const client = coachClient();
+    if (!client) return;
+    if (mode === "edit") {
+      // Повторное нажатие «Редактор» не должно затирать уже начатые правки.
+      if (STATE.coachPlanMode === "edit" && STATE.coachPlanDraft) {
+        render("coach-program", { static: true, focusKey: "coach-plan-rounds" });
+        return;
+      }
+      STATE.coachPlanMode = "edit";
+      STATE.coachPlanDraft = App.coach.programDraft(App.coach.program(client.id));
+      render("coach-program", { static: true, focusKey: "coach-plan-rounds" });
+      return;
+    }
+    // Просмотр и отмена правки не сохраняют.
+    STATE.coachPlanMode = "view";
+    STATE.coachPlanDraft = null;
+    render("coach-program", {
+      static: true,
+      focusKey: mode === "cancel" ? "coach-plan-edit" : "coach-plan-view",
+    });
+  }
+
+  function submitPlanForm() {
+    const client = coachClient();
+    if (!client) return;
+    const draft = planDraft();
+    // Клиент обязателен: проверка «объём не меньше израсходованного» смотрит
+    // на его пакет, иначе сохранение молча отклонялось бы в applyProgram().
+    const check = App.coach.validateProgram(draft, client);
+    if (!check.ok) {
+      showPlanErrors(check);
+      return;
+    }
+    App.coach.applyProgram(client.id, draft);
+    STATE.coachPlanMode = "view";
+    STATE.coachPlanDraft = null;
+    // Открытый в редакторе день мог быть убран из программы: без сброса
+    // guardRoute() увёл бы с экрана тренировки.
+    if (STATE.coachProgramDayId && !App.coach.programDay(client.id, STATE.coachProgramDayId)) {
+      STATE.coachProgramDayId = null;
+    }
+    toast("Программа сохранена (до перезагрузки)");
+    render("coach-program", { static: true, focusKey: "coach-plan-edit" });
+  }
+
+  // Новый день сразу открывается в редакторе тренировки — упражнения
+  // добавляются там, а программа забирает день вместе с «Сохранить».
+  function addPlanDay() {
+    const client = coachClient();
+    const draft = planDraft();
+    if (!client || !draft) return;
+    const max = App.coach.programLimits.daysMax;
+    if (draft.days.length >= max) {
+      toast("В программе не больше " + max + " дней");
+      return;
+    }
+    const day = {
+      dayId: "d" + Date.now(),
+      title: "Новая тренировка",
+      minutes: 0,
+      muscles: [],
+      exercises: [],
+    };
+    draft.days.push(day);
+    STATE.coachProgramDayId = day.dayId;
+    STATE.coachProgramMode = "edit";
+    STATE.coachProgramDraft = App.coach.dayDraft(day);
+    STATE.coachPicker = { open: false, query: "", group: "all" };
+    go("coach-training");
+  }
+
+  // День, добавленный в программу и брошенный без упражнений, в черновике не
+  // остаётся: сохранить пустой день всё равно нельзя.
+  function dropEmptyPlanDay(day) {
+    const draft = STATE.coachPlanDraft;
+    if (!draft || !day) return;
+    const client = coachClient();
+    if (client && App.coach.programDay(client.id, day.dayId)) return;
+    if ((day.exercises || []).length) return;
+    draft.days = draft.days.filter((item) => item.dayId !== day.dayId);
+    if (STATE.coachProgramDayId === day.dayId) STATE.coachProgramDayId = null;
+    clearPlanErrors();
+  }
+
+  function removePlanDay(dayId) {
+    const draft = planDraft();
+    if (!draft) return;
+    if (draft.days.length <= 1) {
+      toast("В программе нужен хотя бы один день");
+      return;
+    }
+    const index = planDayIndex(dayId);
+    if (index === -1) return;
+    draft.days.splice(index, 1);
+    // Убранный день мог быть открыт в редакторе тренировки.
+    if (STATE.coachProgramDayId === dayId) STATE.coachProgramDayId = null;
+    clearPlanErrors();
+    render("coach-program", { static: true, focusKey: "coach-plan-add" });
+  }
+
+  function movePlanDay(dayId, dir) {
+    const draft = planDraft();
+    if (!draft) return;
+    const index = planDayIndex(dayId);
+    const next = index + dir;
+    if (index === -1 || next < 0 || next >= draft.days.length) return;
+    const moved = draft.days[index];
+    draft.days[index] = draft.days[next];
+    draft.days[next] = moved;
+    clearPlanErrors();
+    // Фокус остаётся на стрелке переставленного дня: у края списка стрелка
+    // в ту же сторону уже недоступна, поэтому берём встречную.
+    const up = next === 0 ? "down" : "up";
+    render("coach-program", { static: true, focusKey: "coach-plan-" + up + "-" + dayId });
+  }
+
+  function resetProgramAction() {
+    const client = coachClient();
+    if (!client) return;
+    App.coach.resetProgram(client.id);
+    STATE.coachPlanMode = "view";
+    STATE.coachPlanDraft = null;
+    if (STATE.coachProgramDayId && !App.coach.programDay(client.id, STATE.coachProgramDayId)) {
+      STATE.coachProgramDayId = null;
+    }
+    toast("Программа сброшена (до перезагрузки)");
+    render("coach-program", { static: true, focusKey: "coach-plan-view" });
+  }
+
+  function togglePicker() {
+    const picker = STATE.coachPicker || { open: false, query: "", group: "all" };
+    const open = !picker.open;
+    STATE.coachPicker = { open: open, query: "", group: "all" };
+    render("coach-training", { static: true, focusKey: open ? "coach-picker-search" : "coach-picker-open" });
+  }
+
+  function setPickerGroup(group) {
+    const known = ["all"].concat(App.exercises.groups || []);
+    if (known.indexOf(group) === -1) return;
+    // Поиск сбрасывается вместе с группой: список отрисован заново, и старое
+    // значение в поле показывало бы нефильтрованные результаты.
+    STATE.coachPicker = { open: true, query: "", group: group };
+    render("coach-training", { static: true, focusKey: "coach-picker-group-" + group });
+  }
+
+  // Поиск фильтрует уже отрисованный список прямо в DOM: экран не
+  // перерисовывается, каретка и введённый текст остаются на месте.
+  function filterPicker(input) {
+    const raw = input ? input.value : "";
+    if (STATE.coachPicker) STATE.coachPicker.query = raw;
+    const needle = String(raw).toLowerCase().replace(/ё/g, "е").trim();
+    let shown = 0;
+    document.querySelectorAll("[data-picker-item]").forEach((item) => {
+      const name = item.getAttribute("data-name") || "";
+      const match = !needle || name.indexOf(needle) !== -1;
+      item.hidden = !match;
+      if (match) shown += 1;
+    });
+    const none = document.querySelector("[data-picker-none]");
+    if (none) none.hidden = shown > 0;
+  }
+
+  function addPickerExercise(exerciseId) {
+    const draft = dayDraft();
+    const exercise = App.exercises.find(exerciseId);
+    if (!draft || !exercise) return;
+    if (draft.exercises.length >= App.coach.dayLimits.exercisesMax) {
+      toast("В одном дне не больше " + App.coach.dayLimits.exercisesMax + " упражнений");
+      return;
+    }
+    // Порядок ключей совпадает с App.coach.dayDraft: иначе сравнение
+    // черновика с сохранённым днём всегда считало бы день изменённым.
+    draft.exercises.push({
+      exerciseId: exercise.id,
+      name: exercise.name,
+      group: exercise.group,
+      equipment: exercise.equipment,
+      unit: exercise.unit || "",
+      sets: "3",
+      reps: "12",
+      weight: "",
+      tempo: "2-0-1-0",
+      rest: "90",
+      note: "",
+    });
+    const index = draft.exercises.length - 1;
+    STATE.coachPicker = { open: false, query: "", group: "all" };
+    clearDayErrors();
+    render("coach-training", { static: true, focusKey: "coach-sets-" + index });
+    toast("Добавлено: " + exercise.name);
+  }
+
+  function removeExercise(index) {
+    const draft = dayDraft();
+    if (!draft || !draft.exercises[index]) return;
+    draft.exercises.splice(index, 1);
+    clearDayErrors();
+    // Фокус уезжает на соседнюю строку: удалённой кнопки больше нет.
+    const focus = draft.exercises.length
+      ? "coach-remove-" + Math.min(index, draft.exercises.length - 1)
+      : "coach-picker-open";
+    syncDaySave();
+    render("coach-training", { static: true, focusKey: focus });
+  }
+
+  function moveExercise(index, dir) {
+    const draft = dayDraft();
+    if (!draft) return;
+    const target = index + dir;
+    if (!draft.exercises[index] || !draft.exercises[target]) return;
+    const swap = draft.exercises[index];
+    draft.exercises[index] = draft.exercises[target];
+    draft.exercises[target] = swap;
+    syncDaySave();
+    render("coach-training", {
+      static: true,
+      focusKey: (dir < 0 ? "coach-up-" : "coach-down-") + target,
+    });
+  }
+
+  function resetProgramAction() {
+    const client = coachClient();
+    if (!client) return;
+    App.coach.resetProgram(client.id);
+    STATE.coachProgramDayId = null;
+    STATE.coachProgramMode = "view";
+    STATE.coachProgramDraft = null;
+    STATE.coachPicker = { open: false, query: "", group: "all" };
+    const first = App.coach.program(client.id).days[0];
+    toast("Программа сброшена до шаблона");
+    render("coach-client", { static: true, focusKey: first ? "coach-day-" + first.dayId : "coach-back" });
   }
 
   /* ---------- actions ---------- */
@@ -2242,6 +3273,86 @@
         toast("Правки сброшены");
         break;
       }
+      case "open-coach-training":
+        openCoachTraining(trigger.dataset.day);
+        break;
+      case "open-coach-program":
+        openCoachProgram();
+        break;
+      case "open-coach-nutrition":
+        openCoachNutrition();
+        break;
+      case "coach-norm-cancel":
+        closeCoachNutrition();
+        break;
+      case "coach-norm-reset":
+        resetNormAction();
+        break;
+      case "open-coach-food":
+        openCoachFood();
+        break;
+      case "coach-food-cancel":
+        closeCoachFood();
+        break;
+      case "coach-food-day":
+        selectFoodDay(trigger.dataset.day);
+        break;
+      case "coach-dish-mode":
+        setFoodDishMode(trigger.dataset.mode);
+        break;
+      case "coach-dish-add":
+        addFoodDish(trigger.dataset.dish);
+        break;
+      case "coach-dish-remove":
+        removeFoodDish(trigger.dataset.dish);
+        break;
+      case "coach-food-reset":
+        resetFoodAction();
+        break;
+      case "open-coach-archive":
+        openCoachArchive(trigger.dataset.tab);
+        break;
+      case "coach-archive-tab":
+        selectArchiveTab(trigger.dataset.tab);
+        break;
+      case "coach-program-mode":
+        // Одна кнопка на два экрана: у программы свой режим и черновик.
+        if (currentRoute === "coach-program") setPlanMode(trigger.dataset.mode);
+        else setCoachProgramMode(trigger.dataset.mode);
+        break;
+      case "coach-add-day":
+        addPlanDay();
+        break;
+      case "coach-remove-day":
+        removePlanDay(trigger.dataset.day);
+        break;
+      case "coach-move-day":
+        movePlanDay(trigger.dataset.day, Number(trigger.dataset.dir));
+        break;
+      case "coach-program-cancel":
+        setPlanMode("cancel");
+        break;
+      case "coach-day-cancel":
+        setCoachProgramMode("cancel");
+        break;
+      case "coach-picker-toggle":
+        togglePicker();
+        break;
+      case "coach-picker-group":
+        setPickerGroup(trigger.dataset.group);
+        break;
+      case "coach-add-exercise":
+        addPickerExercise(trigger.dataset.exercise);
+        break;
+      case "coach-remove-exercise":
+        removeExercise(Number(trigger.dataset.item));
+        break;
+      case "coach-move-exercise":
+        moveExercise(Number(trigger.dataset.item), Number(trigger.dataset.dir));
+        break;
+      case "coach-program-reset":
+        resetProgramAction();
+        break;
       case "legal":
         legalSheet(trigger.dataset.legal);
         break;
@@ -2408,6 +3519,35 @@
       syncCoachField(target.dataset.coachField);
       return;
     }
+    // Норма питания: ввод идёт в черновик и сразу связывает калорийность,
+    // граммы и доли — без перерисовки, чтобы не терять каретку.
+    if (target instanceof HTMLInputElement && target.hasAttribute("data-norm-field")) {
+      syncNormField(target);
+      return;
+    }
+    // Поиск упражнений фильтрует отрисованный список в DOM.
+    if (target instanceof HTMLInputElement && target.hasAttribute("data-picker-search")) {
+      filterPicker(target);
+      return;
+    }
+    // Поля дня тоже обновляют только черновик.
+    if (
+      (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) &&
+      target.hasAttribute("data-day-field")
+    ) {
+      // Название дня в редакторе программы правит черновик программы.
+      if (target.getAttribute("data-day-field") === "title" && !target.hasAttribute("data-item")) {
+        syncPlanDayTitle(target);
+        return;
+      }
+      syncDayField(target);
+      return;
+    }
+    // Круги и срок программы — в её черновике, без перерисовки экрана.
+    if (target instanceof HTMLInputElement && target.hasAttribute("data-program-field")) {
+      syncPlanField(target);
+      return;
+    }
     if (target instanceof HTMLElement && target.id === "onboarding-allergies") {
       STATE.onboarding.data.allergies = target.value;
       setFoodError("onboarding-allergies-error", "");
@@ -2496,6 +3636,26 @@
     if (form.hasAttribute("data-coach-form")) {
       event.preventDefault();
       submitCoachForm();
+      return;
+    }
+    if (form.hasAttribute("data-day-form")) {
+      event.preventDefault();
+      submitDayForm();
+      return;
+    }
+    if (form.hasAttribute("data-program-form")) {
+      event.preventDefault();
+      submitPlanForm();
+      return;
+    }
+    if (form.hasAttribute("data-norm-form")) {
+      event.preventDefault();
+      submitNormForm();
+      return;
+    }
+    if (form.hasAttribute("data-food-form")) {
+      event.preventDefault();
+      submitFoodForm();
       return;
     }
     if (PUBLIC_FORMS.indexOf(form.dataset.form) !== -1) {

@@ -141,19 +141,32 @@
       </section>`;
   }
 
+  // Объём тренировок полем не вводится: он считается из программы (дни ×
+  // круги), поэтому в редакторе стоит только чтение. Объём питания правится.
+  function packageVolumeEdit(client, key, pkg, draft) {
+    if (key === "training") {
+      const totals = App.coach.programTotals(App.coach.program(client.id));
+      return `
+        <span class="coach-field coach-package-edit">
+          <span class="coach-field-label">Объём пакета тренировок</span>
+          <span class="coach-package-static" data-package-static="training">${totals.workouts} ${plural(totals.workouts, ["тренировка", "тренировки", "тренировок"])} · ${totals.days} ${plural(totals.days, ["день", "дня", "дней"])} × ${totals.rounds} ${plural(totals.rounds, ["круг", "круга", "кругов"])}</span>
+          <span class="coach-hint">считается из программы клиента</span>
+        </span>`;
+    }
+    return `
+        <span class="coach-field coach-package-edit">
+          <label class="coach-field-label" for="coach-${key}-total">Объём пакета ${escapeHtml(App.coach.packageGenitive(key))}</label>
+          <input class="coach-input coach-input--num" id="coach-${key}-total" type="number" min="0" max="${LIMITS.packageMax[key]}" step="1" inputmode="numeric" autocomplete="off" value="${escapeHtml(draft[key + "Total"])}" data-coach-field="${key}Total" data-focus="coach-${key}-total">
+          <span class="coach-hint">израсходовано ${pkg.used} из ${pkg.total}</span>
+        </span>`;
+  }
+
   function packageRow(client, key, draft) {
     const pkg = client.packages[key];
     const state = App.coach.packageState(pkg);
     const done = Math.min(pkg.used, pkg.total);
     const when = pkg.startedDaysAgo === null ? "" : `активирован ${ago(pkg.startedDaysAgo)}`;
-    const field = draft
-      ? `
-        <span class="coach-field coach-package-edit">
-          <label class="coach-field-label" for="coach-${key}-total">Объём пакета ${escapeHtml(App.coach.packageGenitive(key))}</label>
-          <input class="coach-input coach-input--num" id="coach-${key}-total" type="number" min="0" max="${LIMITS.packageMax[key]}" step="1" inputmode="numeric" autocomplete="off" value="${escapeHtml(draft[key + "Total"])}" data-coach-field="${key}Total" data-focus="coach-${key}-total">
-          <span class="coach-hint">израсходовано ${pkg.used} из ${pkg.total}</span>
-        </span>`
-      : "";
+    const field = draft ? packageVolumeEdit(client, key, pkg, draft) : "";
     return `
       <li class="coach-package coach-package--${state}">
         <span class="coach-package-top">
@@ -203,6 +216,12 @@
       </section>`;
   }
 
+  // Сводка программы: дни, круги, срок и производный объём пакета. Формат общий
+  // с экраном программы — его собирает App.coach.programLine().
+  function programSummary(client) {
+    return App.coach.programLine(App.coach.program(client.id));
+  }
+
   function trainingBlock(client) {
     const pkg = client.packages.training;
     const last = client.lastTraining;
@@ -212,25 +231,69 @@
       <section class="coach-section card">
         <h2 class="coach-block-title">Тренировки</h2>
         <dl class="coach-rows">
-          <div class="coach-row"><dt>Программа</dt><dd>${pkg.total} ${plural(pkg.total, ["занятие", "занятия", "занятий"])}</dd></div>
+          <div class="coach-row"><dt>Программа</dt><dd data-program-line>${escapeHtml(programSummary(client))}</dd></div>
           <div class="coach-row"><dt>Выполнено</dt><dd>${pkg.used} из ${pkg.total}</dd></div>
           <div class="coach-row"><dt>Последняя</dt><dd>${lastLine}</dd></div>
           <div class="coach-row"><dt>Следующая по плану</dt><dd>${next}</dd></div>
         </dl>
+        <div class="coach-program" data-program>
+          <button class="coach-program-day coach-program-day--link" type="button" data-action="open-coach-program" data-focus="coach-program-link">
+            <span class="coach-program-text">
+              <span class="coach-program-name">Открыть программу</span>
+              <span class="coach-program-meta">дни, круги и срок пакета</span>
+            </span>
+            ${icon("chevron-right")}
+          </button>
+          <button class="coach-program-day coach-program-day--link" type="button" data-action="open-coach-archive" data-tab="training" data-focus="coach-archive-open-training">
+            <span class="coach-program-text">
+              <span class="coach-program-name">Архив тренировок</span>
+              <span class="coach-program-meta">тоннаж, КПШ и дни пакета</span>
+            </span>
+            ${icon("chevron-right")}
+          </button>
+        </div>
       </section>`;
   }
 
   function nutritionBlock(client) {
     const nutrition = client.nutrition;
+    const norm = App.coach.nutritionNorm(client);
+    const badge = App.coach.hasNorm(client.id)
+      ? ' <span class="coach-badge">правка тренера</span>'
+      : "";
     return `
       <section class="coach-section card">
-        <h2 class="coach-block-title">Питание</h2>
+        <h2 class="coach-block-title">Питание${badge}</h2>
         <dl class="coach-rows">
-          <div class="coach-row"><dt>Норма</dt><dd>${num(nutrition.targetKcal)} ккал</dd></div>
+          <div class="coach-row"><dt>Норма</dt><dd data-norm-kcal>${num(norm.kcal)} ккал</dd></div>
+          <div class="coach-row"><dt>БЖУ</dt><dd data-norm-macros>${num(norm.protein)} / ${num(norm.fat)} / ${num(norm.carbs)} г</dd></div>
           <div class="coach-row"><dt>Среднее за неделю</dt><dd>${num(nutrition.avgKcal)} ккал</dd></div>
           <div class="coach-row"><dt>Отклонение от нормы</dt><dd>${escapeHtml(App.coach.budgetLabel(client))}</dd></div>
           <div class="coach-row"><dt>Вода</dt><dd>${nutrition.avgWater} из ${nutrition.targetWater} стаканов</dd></div>
         </dl>
+        <div class="coach-program" data-norm>
+          <button class="coach-program-day coach-program-day--link" type="button" data-action="open-coach-nutrition" data-focus="coach-nutrition-open">
+            <span class="coach-program-text">
+              <span class="coach-program-name">Настроить КБЖУ</span>
+              <span class="coach-program-meta">калорийность, граммы и доли</span>
+            </span>
+            ${icon("chevron-right")}
+          </button>
+          <button class="coach-program-day coach-program-day--link" type="button" data-action="open-coach-food" data-focus="coach-food-open">
+            <span class="coach-program-text">
+              <span class="coach-program-name">Дни питания</span>
+              <span class="coach-program-meta">${App.coach.foodDayCount(client.id)} из ${client.packages.nutrition.used} дней заполнено</span>
+            </span>
+            ${icon("chevron-right")}
+          </button>
+          <button class="coach-program-day coach-program-day--link" type="button" data-action="open-coach-archive" data-tab="nutrition" data-focus="coach-archive-open-nutrition">
+            <span class="coach-program-text">
+              <span class="coach-program-name">Архив питания</span>
+              <span class="coach-program-meta">норма, факт по дням и вес</span>
+            </span>
+            ${icon("chevron-right")}
+          </button>
+        </div>
       </section>`;
   }
 
@@ -305,19 +368,27 @@
       : "";
     return `
     <div class="coach coach-client-page">
-      ${backLink()}
-      ${cardHead(client)}
-      ${banner}
-      ${goalBlock(client, draft)}
-      ${packagesBlock(client, draft)}
-      ${factsBlock(client)}
-      <div class="coach-blocks">
-        ${trainingBlock(client)}
-        ${nutritionBlock(client)}
+      <div class="coach-client-top">
+        ${backLink()}
+        ${cardHead(client)}
       </div>
-      ${noteBlock(client, draft)}
-      ${editing ? "" : overridesBlock(client)}
-      ${actionsBlock()}
+      ${banner}
+      <div class="coach-client-cols">
+        <div class="coach-col">
+          ${goalBlock(client, draft)}
+          ${packagesBlock(client, draft)}
+          ${factsBlock(client)}
+        </div>
+        <div class="coach-col">
+          <div class="coach-blocks">
+            ${trainingBlock(client)}
+            ${nutritionBlock(client)}
+          </div>
+          ${noteBlock(client, draft)}
+          ${editing ? "" : overridesBlock(client)}
+          ${actionsBlock()}
+        </div>
+      </div>
       ${editing ? saveBar() : ""}
     </div>`;
   }

@@ -30,10 +30,14 @@
     });
   }
   function macroRows(macros) {
+    // Норму берём из анкеты, когда она заполнена; иначе — статические цели
+    // демо-клиента. Вода остаётся DATA.targets.water в обоих случаях.
+    const auto = App.calories && typeof App.calories.macroTargets === "function" ? App.calories.macroTargets() : null;
+    const targets = auto || DATA.targets;
     const rows = [
-      { label: "Белки", letter: "Б", value: macros.p, target: DATA.targets.protein, tone: "protein" },
-      { label: "Жиры", letter: "Ж", value: macros.f, target: DATA.targets.fat, tone: "fat" },
-      { label: "Углеводы", letter: "У", value: macros.c, target: DATA.targets.carbs, tone: "carb" },
+      { label: "Белки", letter: "Б", value: macros.p, target: targets.protein, tone: "protein" },
+      { label: "Жиры", letter: "Ж", value: macros.f, target: targets.fat, tone: "fat" },
+      { label: "Углеводы", letter: "У", value: macros.c, target: targets.carbs, tone: "carb" },
     ];
     return `
       <div class="macro-list">

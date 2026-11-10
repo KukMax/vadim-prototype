@@ -100,7 +100,7 @@
   // "coach" и "coach-client" — кабинет тренера: отдельная оболочка, в сайдбар
   // и таб-бар не входит. Карточка клиента — отдельный экран с тем же шеллом,
   // чтобы работали «назад» браузера и прямая ссылка.
-  const ROUTES = ["welcome", "demo", "register", "verify", "onboarding", "home", "workouts", "nutrition", "reports", "profile", "questionnaire", "coach", "coach-client"];
+  const ROUTES = ["welcome", "demo", "register", "verify", "onboarding", "home", "workouts", "nutrition", "reports", "profile", "questionnaire", "coach", "coach-client", "coach-program", "coach-training", "coach-nutrition", "coach-food", "coach-archive"];
   const PAGE_TITLES = {
     welcome: "Вход — Trenio",
     demo: "Демо-кабинет — Trenio",
@@ -115,6 +115,11 @@
     questionnaire: "Моя анкета — Trenio",
     coach: "Клиенты — кабинет тренера",
     "coach-client": "Клиент — кабинет тренера",
+    "coach-program": "Программа — кабинет тренера",
+    "coach-training": "Тренировка — кабинет тренера",
+    "coach-nutrition": "Питание — кабинет тренера",
+    "coach-food": "Дни питания — кабинет тренера",
+    "coach-archive": "Архив пакета — кабинет тренера",
   };
   const SCREEN_IDS = {
     welcome: "screen-welcome",
@@ -130,6 +135,11 @@
     questionnaire: "screen-questionnaire",
     coach: "screen-coach",
     "coach-client": "screen-coach-client",
+    "coach-program": "screen-coach-program",
+    "coach-training": "screen-coach-training",
+    "coach-nutrition": "screen-coach-nutrition",
+    "coach-food": "screen-coach-food",
+    "coach-archive": "screen-coach-archive",
   };
 
   const pad = (value) => String(value).padStart(2, "0");
@@ -242,6 +252,9 @@
       ],
     },
   ];
+
+  // Кабинет тренера собирает программу из этих же шаблонов — отдаём их в DATA.
+  DATA.cycleTemplates = cycleTemplates;
 
   // Подходы из шаблона копируются глубоко: правки клиента живут в STATE.cycle.edits
   // и не должны менять ни шаблон, ни архивные циклы.
