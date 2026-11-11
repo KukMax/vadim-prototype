@@ -65,7 +65,11 @@
   // а не как список добавлений. Номер в data-focus — позиция в дне (1-based).
   function selectedBlock(draft) {
     if (draft.dishes.length === 0) {
-      return emptyBlock("День пока пуст", "Отметьте блюда в каталоге ниже — калорийность посчитаем сразу.");
+      return `
+        <section class="coach-food-selected">
+          <h3 class="coach-block-title">Добавленные блюда</h3>
+          <p class="coach-hint">Пока пусто — отметьте блюда в каталоге выше.</p>
+        </section>`;
     }
     const byName = {};
     (DATA.dishCatalog || []).forEach((item) => { byName[item.name] = item; });
@@ -76,23 +80,30 @@
         .filter((name) => byName[name] && byName[name].group === group.key)
         .map((name) => byName[name]),
     })).filter((group) => group.items.length > 0);
-    return groups.map((group) => `
-      <section class="coach-dish-group">
-        <h3 class="coach-dish-group-title">${escapeHtml(group.title)}</h3>
-        <ul class="coach-dish-list">${group.items.map((item) => {
-          const pos = draft.dishes.indexOf(item.name) + 1;
-          return `
-            <li class="coach-dish">
-              <span class="coach-dish-text">
-                <span class="coach-dish-name">${escapeHtml(item.name)}</span>
-                <span class="coach-dish-meta">${item.g} г · ${num(item.k)} ккал</span>
-              </span>
-              <button class="coach-dish-remove" type="button" data-action="coach-dish-remove" data-dish="${escapeHtml(item.name)}" data-focus="coach-food-dish-${pos}" aria-label="Убрать «${escapeHtml(item.name)}»" title="Убрать «${escapeHtml(item.name)}»">Убрать</button>
-            </li>`;
-        }).join("")}</ul>
-      </section>`).join("");
+    return `
+      <section class="coach-food-selected">
+        <h3 class="coach-block-title">Добавленные блюда</h3>
+        ${groups.map((group) => `
+          <section class="coach-dish-group">
+            <h4 class="coach-dish-group-title">${escapeHtml(group.title)}</h4>
+            <ul class="coach-dish-list">${group.items.map((item) => {
+              const pos = draft.dishes.indexOf(item.name) + 1;
+              return `
+                <li class="coach-dish">
+                  <span class="coach-dish-text">
+                    <span class="coach-dish-name">${escapeHtml(item.name)}</span>
+                    <span class="coach-dish-meta">${item.g} г · ${num(item.k)} ккал</span>
+                  </span>
+                  <button class="coach-dish-remove" type="button" data-action="coach-dish-remove" data-dish="${escapeHtml(item.name)}" data-focus="coach-food-dish-${pos}" aria-label="Убрать «${escapeHtml(item.name)}»" title="Убрать «${escapeHtml(item.name)}»">Убрать</button>
+                </li>`;
+            }).join("")}</ul>
+          </section>`).join("")}
+      </section>`;
   }
 
+  // Итоги идут первыми: тренер сначала видит КБЖУ и расхождение, потом уже
+  // выбирает блюда. Строки разделены линиями, чтобы показатели читались
+  // по одному, а не сливались в список.
   function totalsBlock(client, draft) {
     const totals = App.coach.dishTotals(draft.dishes);
     const norm = App.coach.nutritionNorm(client).kcal;
@@ -107,9 +118,19 @@
       ["Норма", num(norm) + " ккал"],
       ["Расхождение", deltaText],
     ];
+    const over = Math.abs(delta) > 150;
+    // Подсказка есть всегда, разными словами: если появлять её только при
+    // выходе за 150 ккал, она сдвигала бы каталог блюд вниз прямо во время
+    // выбора.
+    const hint = over
+      ? "Больше 150 ккал от нормы — проверьте порции."
+      : "Норма из анкеты, факт по блюдам дня.";
     return `
-      <dl class="coach-rows">${rows.map((row) => `<div class="coach-row"><dt>${escapeHtml(row[0])}</dt><dd>${escapeHtml(row[1])}</dd></div>`).join("")}</dl>
-      ${Math.abs(delta) > 150 ? '<p class="coach-hint">День сильно отличается от нормы — проверьте порции и состав.</p>' : ""}`;
+      <section class="coach-food-totals">
+        <h3 class="coach-block-title">Итоги дня</h3>
+        <dl class="coach-rows coach-rows--ruled">${rows.map((row) => `<div class="coach-row"><dt>${escapeHtml(row[0])}</dt><dd>${escapeHtml(row[1])}</dd></div>`).join("")}</dl>
+        <p class="coach-hint${over ? " is-warn" : ""}">${escapeHtml(hint)}</p>
+      </section>`;
   }
 
   // Каталог: в режиме «Все блюда» показываем и не отмеченное клиентом, но
@@ -131,7 +152,9 @@
         <div class="coach-dish-picks">${group.items.map((item) => {
           const inDay = draft && draft.dishes.indexOf(item.name) !== -1;
           const off = mode === "all" && !item.checked;
-          const mark = inDay ? "уже в дне" : off ? "не отмечено" : "";
+          // Отмеченное блюдо видно по подсветке кнопки (is-on, aria-pressed),
+          // а подпись «уже в дне» увеличивала строку при добавлении.
+          const mark = off ? "не отмечено" : "";
           return `
             <button class="coach-dish-pick${inDay ? " is-on" : ""}${off ? " is-off" : ""}" type="button" data-action="coach-dish-add" data-dish="${escapeHtml(item.name)}" data-focus="coach-food-pick-${escapeHtml(item.name)}" aria-pressed="${inDay}">
               <span class="coach-dish-pick-name">${escapeHtml(item.name)}</span>
@@ -156,9 +179,9 @@
             <div class="coach-mode" role="group" aria-label="Фильтр блюд">${modeButton("checked")}${modeButton("all")}</div>
           </div>
           <div data-food-errors></div>
-          ${selectedBlock(draft)}
           ${totalsBlock(client, draft)}
           ${catalogBlock(client)}
+          ${selectedBlock(draft)}
           <div class="coach-savebar${dirty ? " is-dirty" : ""}">
             <button class="btn btn--ghost" type="button" data-action="coach-food-cancel" data-focus="coach-food-cancel">Отмена</button>
             ${reset}

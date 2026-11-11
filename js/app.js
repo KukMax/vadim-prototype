@@ -2231,7 +2231,9 @@
       return;
     }
     draftValue.dishes.push(name);
-    render("coach-food", { static: true, focusKey: "coach-food-dish-" + draftValue.dishes.length });
+    // Фокус остаётся на кнопке каталога: список добавленных растёт ниже и
+    // уже не прыгает. Клавиатурой можно добавить несколько блюд подряд.
+    render("coach-food", { static: true, focusKey: "coach-food-pick-" + name });
   }
 
   function removeFoodDish(name) {
@@ -3271,6 +3273,13 @@
         if (clientId) render("coach-client", { static: true, focusKey: "coach-mode-view" });
         else render("coach", { static: true });
         toast("Правки сброшены");
+        break;
+      }
+      case "coach-package-toggle": {
+        const result = App.coach.togglePackage(trigger.dataset.client, trigger.dataset.package);
+        if (!result) break;
+        render("coach-client", { static: true, focusKey: "coach-package-toggle-" + result.key });
+        toast(result.active ? "Пакет активирован (до перезагрузки)" : "Пакет деактивирован (до перезагрузки)");
         break;
       }
       case "open-coach-training":

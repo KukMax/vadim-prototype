@@ -126,10 +126,11 @@
 
 .demo-ring-card{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:16px;padding:16px;}
 .demo-ring{display:flex;align-items:center;justify-content:center;}
-/* Подпись внутри кольца: две строки без зазора, с отступами от дуги. */
-.demo-ring .ring-center{padding:0 20px;line-height:1;gap:0;}
-.demo-ring .ring-center b{font-size:calc(var(--ring-size) * .19);font-weight:750;letter-spacing:-.04em;}
-.demo-ring .ring-center span{color:var(--muted);font-size:11px;font-weight:600;letter-spacing:0;}
+/* 11M. Две строки подписи: число и «ккал» стоят рядом по центру кольца,
+   а не растягиваются на всю его высоту. */
+.demo-ring .ring-center{padding:0 20px;line-height:1;gap:0;align-content:center;justify-content:center;grid-auto-rows:min-content;}
+.demo-ring .ring-center b{font-size:calc(var(--ring-size) * .19);font-weight:750;letter-spacing:-.04em;line-height:.92;}
+.demo-ring .ring-center span{color:var(--muted);font-size:11px;font-weight:600;letter-spacing:0;line-height:1;margin-top:2px;}
 .demo-ring-copy{display:flex;flex-direction:column;gap:6px;min-width:0;}
 .demo-ring-text{margin:0;color:var(--muted);font-size:12.5px;line-height:1.4;}
 .demo-macros{display:flex;flex-direction:column;gap:4px;margin-top:2px;}

@@ -220,6 +220,70 @@
     return (all && all[id]) || null;
   }
 
+  // Активация пакетов хранится отдельно от правок карточки: форма сохраняет
+  // coachOverrides[id] целиком, а пакеты переключаются кнопкой.
+  function packagePatches() {
+    if (!App.state.coachPackages) App.state.coachPackages = {};
+    return App.state.coachPackages;
+  }
+
+  function packagePatch(clientId, key) {
+    const all = packagePatches()[clientId];
+    return (all && all[key]) || null;
+  }
+
+  // Пакет для экрана: фикстура плюс активация, если она есть.
+  function packageView(client, key) {
+    const base = client && client.packages ? client.packages[key] : null;
+    if (!base) return null;
+    const patch = packagePatch(client.id, key);
+    if (!patch) return base;
+    return { used: patch.used, total: base.total, startedDaysAgo: patch.startedDaysAgo };
+  }
+
+  function packageActive(client, key) {
+    const pkg = packageView(client, key);
+    return pkg ? packageState(pkg) !== "inactive" : false;
+  }
+
+  // Показатели пакета как в фикстуре: нужны, чтобы возврат кнопкой не терял
+  // прогресс, накопленный до выключения.
+  function fixturePackage(clientId, key) {
+    const clients = CLIENTS.filter((item) => item.id === clientId);
+    const client = clients[0];
+    const packs = client && client.packages ? client.packages : null;
+    return packs ? packs[key] || null : null;
+  }
+
+  // Выключение обнуляет пакет, включение возвращает его к состоянию фикстуры:
+  // у Алексея тренировки снова 7 из 12, а не 0 из 12. Пакет, который в фикстуре
+  // не активирован (у Ольги), стартует сегодня с нуля.
+  function togglePackage(clientId, key) {
+    const client = find(clientId);
+    if (!client) return null;
+    const base = fixturePackage(clientId, key);
+    if (!base || !base.total) return null;
+    const active = packageActive(client, key);
+    const started = base.startedDaysAgo === null || base.startedDaysAgo === undefined ? null : base.startedDaysAgo;
+    const next = active
+      ? { startedDaysAgo: null, used: 0 }
+      : { startedDaysAgo: started === null ? 0 : started, used: base.used };
+    const all = packagePatches();
+    if (started === next.startedDaysAgo && base.used === next.used) {
+      // Данные вернулись к фикстуре — правку убираем, чтобы «правки» в карточке
+      // не горели зря.
+      const entry = all[clientId];
+      if (entry) {
+        delete entry[key];
+        if (Object.keys(entry).length === 0) delete all[clientId];
+      }
+    } else {
+      const entry = all[clientId] || (all[clientId] = {});
+      entry[key] = next;
+    }
+    return { client: client, key: key, active: !active };
+  }
+
   // Правки накладываются на копию фикстуры при каждом чтении: исходные данные
   // не трогаются, а сброс правок возвращает прежние значения сам собой.
   function withOverrides(client) {
@@ -231,6 +295,17 @@
       if (typeof patch.note === "string") copy.note = patch.note;
       const nutrition = patch.packages && patch.packages.nutrition ? patch.packages.nutrition.total : null;
       if (typeof nutrition === "number") copy.packages.nutrition.total = nutrition;
+    }
+    // Активация пакетов живёт в отдельной карте и переносится на копию поверх
+    // правок: правка формы не должна её затирать.
+    const packs = (App.state.coachPackages && App.state.coachPackages[client.id]) || null;
+    if (packs) {
+      Object.keys(packs).forEach((key) => {
+        const target = copy.packages[key];
+        if (!target) return;
+        target.startedDaysAgo = packs[key].startedDaysAgo;
+        target.used = packs[key].used;
+      });
     }
     // Объём тренировок руками не вводится: единственный источник — программа
     // (дни × круги), поэтому пакет получает цифру здесь, при чтении.
@@ -323,18 +398,25 @@
 
   function hasOverrides(id) {
     const all = App.state && App.state.coachOverrides;
-    if (!all) return false;
-    if (id) return !!all[id];
-    return Object.keys(all).length > 0;
+    const packs = App.state && App.state.coachPackages ? App.state.coachPackages : null;
+    if (id) {
+      const mine = packs && packs[id];
+      return !!((all && all[id]) || (mine && Object.keys(mine).length > 0));
+    }
+    return !!((all && Object.keys(all).length > 0) || (packs && Object.keys(packs).length > 0));
   }
 
   function reset(id) {
     const all = App.state && App.state.coachOverrides;
     if (all) delete all[id];
+    delete packagePatches()[id];
   }
 
   function resetAll() {
-    if (App.state) App.state.coachOverrides = {};
+    if (App.state) {
+      App.state.coachOverrides = {};
+      App.state.coachPackages = {};
+    }
   }
 
   /* ---------- норма питания клиента (КБЖУ) ---------- */
@@ -849,13 +931,33 @@
     };
   }
 
+  // Название строки упражнения: в программе оно уже есть, но старые фикстуры
+  // могут хранить только exerciseId — тогда спрашиваем справочник.
+  function exerciseTitle(item, index) {
+    if (item && item.name) return String(item.name);
+    const id = item && item.exerciseId;
+    const found = id && App.exercises && App.exercises.find ? App.exercises.find(id) : null;
+    return found ? found.name : "Упражнение " + (index + 1);
+  }
+
+  // Кроме суммы за день отдаём объём по каждому упражнению: КПШ и тоннаж
+  // считаются по упражнению, а не по группе мышц.
   function dayVolume(day) {
     const exercises = day && Array.isArray(day.exercises) ? day.exercises : [];
     let total = { reps: 0, tonnage: 0, timed: 0 };
     let sets = 0;
-    exercises.forEach((item) => {
-      if (Array.isArray(item.sets)) sets += item.sets.length;
-      total = addVolume(total, exerciseVolume(item));
+    const items = exercises.map((item, index) => {
+      const volume = exerciseVolume(item);
+      const count = Array.isArray(item.sets) ? item.sets.length : 0;
+      sets += count;
+      total = addVolume(total, volume);
+      return {
+        name: exerciseTitle(item, index),
+        sets: count,
+        reps: volume.reps,
+        tonnage: volume.tonnage,
+        timed: volume.timed > 0,
+      };
     });
     return {
       exercises: exercises.length,
@@ -863,6 +965,7 @@
       reps: total.reps,
       tonnage: total.tonnage,
       timed: total.timed,
+      items,
     };
   }
 
@@ -875,6 +978,7 @@
       return {
         dayId: day.dayId,
         title: day.title,
+        items: volume.items,
         exercises: volume.exercises,
         sets: volume.sets,
         reps: volume.reps,
@@ -1380,6 +1484,9 @@
       packageMax: PACKAGE_MAX,
     },
     packageState,
+    packageView,
+    packageActive,
+    togglePackage,
     packageLabel,
     packageTitle,
     packageGenitive,

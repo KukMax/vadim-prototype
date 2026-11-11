@@ -29,7 +29,7 @@
   }
 
   function packageRow(client, key) {
-    const pkg = client.packages[key];
+    const pkg = App.coach.packageView(client, key) || client.packages[key];
     const state = App.coach.packageState(pkg);
     const done = Math.min(pkg.used, pkg.total);
     return `

@@ -81,15 +81,31 @@
       </dl>`;
   }
 
+  // День — одна карточка: строка с итогами дня, под ней по строке на
+  // упражнение. Упражнения на время (планка) остаются без КПШ и тоннажа.
+  function exerciseRow(item) {
+    return `
+      <tr class="coach-archive-exercise">
+        <td data-label="Упражнение">${escapeHtml(item.name)}${item.timed ? ' <span class="coach-archive-timed">на время</span>' : ""}</td>
+        <td class="coach-archive-skip" data-label="Упражнений"></td>
+        <td data-label="Подходов">${num(item.sets)}</td>
+        <td data-label="КПШ">${item.timed ? "—" : repsText(item.reps)}</td>
+        <td data-label="Тоннаж, кг">${item.timed ? "—" : tonnageText(item.tonnage)}</td>
+      </tr>`;
+  }
+
   function daysTable(data) {
-    const rows = data.days.map((row) => `
-      <tr>
-        <td data-label="День">${escapeHtml(row.title)}</td>
-        <td data-label="Упражнений">${num(row.exercises)}</td>
-        <td data-label="Подходов">${num(row.sets)}</td>
-        <td data-label="КПШ">${repsText(row.reps)}</td>
-        <td data-label="Тоннаж, кг">${tonnageText(row.tonnage)}</td>
-      </tr>`).join("");
+    const groups = data.days.map((row) => `
+      <tbody class="coach-archive-day">
+        <tr class="coach-archive-dayrow">
+          <td data-label="День">${escapeHtml(row.title)}</td>
+          <td data-label="Упражнений">${num(row.exercises)}</td>
+          <td data-label="Подходов">${num(row.sets)}</td>
+          <td data-label="КПШ">${repsText(row.reps)}</td>
+          <td data-label="Тоннаж, кг">${tonnageText(row.tonnage)}</td>
+        </tr>
+        ${row.items.map(exerciseRow).join("")}
+      </tbody>`).join("");
     return `
       <div class="coach-table-wrap">
         <table class="coach-archive-table">
@@ -102,8 +118,8 @@
               <th scope="col">Тоннаж, кг</th>
             </tr>
           </thead>
-          <tbody>
-            ${rows}
+          ${groups}
+          <tbody class="coach-archive-totals">
             <tr class="coach-archive-total">
               <td data-label="Итого">Круг</td>
               <td data-label="Упражнений">—</td>

@@ -162,11 +162,17 @@
   }
 
   function packageRow(client, key, draft) {
-    const pkg = client.packages[key];
+    const pkg = App.coach.packageView(client, key) || client.packages[key];
     const state = App.coach.packageState(pkg);
     const done = Math.min(pkg.used, pkg.total);
     const when = pkg.startedDaysAgo === null ? "" : `активирован ${ago(pkg.startedDaysAgo)}`;
     const field = draft ? packageVolumeEdit(client, key, pkg, draft) : "";
+    const active = App.coach.packageActive(client, key);
+    const canToggle = pkg.total > 0;
+    // 11N. Класс кнопки показывает состояние пакета, а не только её текст.
+    const toggleState = active ? "is-on" : "is-off";
+    const toggle = `
+        <button class="btn coach-package-toggle ${toggleState}" type="button" data-action="coach-package-toggle" data-client="${escapeHtml(client.id)}" data-package="${escapeHtml(key)}" data-focus="coach-package-toggle-${escapeHtml(key)}"${canToggle ? "" : " disabled aria-disabled=\"true\""}>${active ? "Деактивировать" : "Активировать"}</button>`;
     return `
       <li class="coach-package coach-package--${state}">
         <span class="coach-package-top">
@@ -179,6 +185,7 @@
           <span class="coach-package-when">${escapeHtml(when)}</span>
         </span>
         ${field}
+        ${toggle}
       </li>`;
   }
 
